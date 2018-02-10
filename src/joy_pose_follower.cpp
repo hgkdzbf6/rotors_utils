@@ -75,7 +75,7 @@ void JoyPoseFollower::TimerCallback(const ros::TimerEvent& e){
 	  dt = std::max(0.01, std::min(1.0, (now - pose_.header.stamp).toSec()));
   }else{
   }
-
+  // 起飞还是保留的
   if (GetButton(buttons_.takeoff)){
     std_srvs::Trigger srv;
     pose_.pose.position.z= take_off_height_ ;
@@ -89,14 +89,16 @@ void JoyPoseFollower::TimerCallback(const ros::TimerEvent& e){
     pose_.pose.position.z += GetAxis(axes_.z) * dt;
   }
 
-  pose_.header.stamp = now;
-  pose_.header.frame_id = world_frame_;
-  pose_.pose.position.x += (cos(yaw_) * GetAxis(axes_.x) - sin(yaw_) * GetAxis(axes_.y)) * dt;
-  pose_.pose.position.y += (cos(yaw_) * GetAxis(axes_.y) + sin(yaw_) * GetAxis(axes_.x)) * dt;
-  yaw_ += GetAxis(axes_.yaw) * M_PI/180.0 * dt /3;
-  tf2::Quaternion q;
-  q.setRPY(0.0, 0.0, yaw_);
-  pose_.pose.orientation = tf2::toMsg(q);
+  // 后面这段那个需要改动,根据匹配获得的偏移量信息来进行操作
+  
+  // pose_.header.stamp = now;
+  // pose_.header.frame_id = world_frame_;
+  // pose_.pose.position.x += (cos(yaw_) * GetAxis(axes_.x) - sin(yaw_) * GetAxis(axes_.y)) * dt;
+  // pose_.pose.position.y += (cos(yaw_) * GetAxis(axes_.y) + sin(yaw_) * GetAxis(axes_.x)) * dt;
+  // yaw_ += GetAxis(axes_.yaw) * M_PI/180.0 * dt /3;
+  // tf2::Quaternion q;
+  // q.setRPY(0.0, 0.0, yaw_);
+  // pose_.pose.orientation = tf2::toMsg(q);
   pose_pub_.publish(pose_);
 }
 

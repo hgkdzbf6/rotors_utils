@@ -207,6 +207,15 @@ target_link_libraries(transformation
   ${catkin_LIBRARIES}
 )
 
+add_executable(trajectory_generation
+  src/trajectory_generation.cpp
+  include/rotors_utils/trajectory_generation.hpp
+)
+add_dependencies(trajectory_generation ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(trajectory_generation
+  ${catkin_LIBRARIES}
+)
+
 
 add_executable(rotors_joy_pose_follower_interface src/joy_pose_follower.cpp)
 add_dependencies(rotors_joy_pose_follower_interface ${catkin_EXPORTED_TARGETS})

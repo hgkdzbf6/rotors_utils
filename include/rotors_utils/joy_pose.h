@@ -82,6 +82,7 @@ class JoyPose {
   ros::Subscriber joy_sub_;
 
   ros::ServiceClient taking_off_client_;
+  ros::ServiceClient taking_off2_client_;
   
   std::string namespace_;
   double slow_factor_;

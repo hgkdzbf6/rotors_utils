@@ -64,6 +64,7 @@ JoyPose::JoyPose():yaw_(0) {
   nh_.param<std::string>("base_stabilized_frame", base_stabilized_frame_, "base_stabilized");
 
   taking_off_client_ = nh_.serviceClient<std_srvs::Trigger>("taking_off");
+  taking_off2_client_ = nh_.serviceClient<std_srvs::Trigger>("taking_off2");
 
   joy_sub_ = nh_.subscribe("joy", 10, &JoyPose::JoyCallback, this);
 }
@@ -76,6 +77,15 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
   }else{
   }
 
+  if (GetButton(buttons_.stop)){
+    std_srvs::Trigger srv2;
+    if(taking_off2_client_.call(srv2)){
+      ROS_INFO("message: %s",srv2.response.message.c_str());
+    }else{
+      ROS_ERROR("Failed to call service add_two_ints");
+    }
+  }
+
   if (GetButton(buttons_.takeoff)){
     std_srvs::Trigger srv;
     pose_.pose.position.z= take_off_height_ ;
@@ -83,7 +93,7 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
       ROS_INFO("message: %s",srv.response.message.c_str());
     }else{
       ROS_ERROR("Failed to call service add_two_ints");
-    }
+    }    
 //    ROS_INFO("taking off button pressed");
   }else{
     pose_.pose.position.z += GetAxis(axes_.z) * dt;
@@ -131,13 +141,9 @@ bool JoyPose::GetButton( const Button &button)
   return a;
 }
 
-
-
 int main(int argc, char** argv) {
   ros::init(argc, argv, "rotors_joy_pose_interface");
   JoyPose joy_pose;
-
   ros::spin();
-
   return 0;
 }
