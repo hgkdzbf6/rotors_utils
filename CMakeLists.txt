@@ -7,7 +7,7 @@ project(rotors_utils)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp tf hector_uav_msgs geometry_msgs sensor_msgs nav_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp tf hector_uav_msgs geometry_msgs sensor_msgs rotors_comm nav_msgs)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -35,7 +35,7 @@ find_package(catkin REQUIRED COMPONENTS roscpp tf hector_uav_msgs geometry_msgs 
 ## * In this file (CMakeLists.txt):
 ##   * add "message_generation" and every package in MSG_DEP_SET to
 find_package(catkin REQUIRED COMPONENTS
-  roscpp tf geometry_msgs sensor_msgs hector_uav_msgs nav_msgs mav_msgs
+  roscpp tf geometry_msgs sensor_msgs hector_uav_msgs nav_msgs mav_msgs rotors_comm
 )
 ##   * add "message_runtime" and every package in MSG_DEP_SET to
 ##     catkin_package(CATKIN_DEPENDS ...)
@@ -217,17 +217,27 @@ target_link_libraries(trajectory_generation
 )
 
 
-add_executable(rotors_joy_pose_follower_interface src/joy_pose_follower.cpp)
-add_dependencies(rotors_joy_pose_follower_interface ${catkin_EXPORTED_TARGETS})
-target_link_libraries(rotors_joy_pose_follower_interface ${catkin_LIBRARIES})
+add_executable(joy_pose_follower src/joy_pose_follower.cpp)
+add_dependencies(joy_pose_follower ${catkin_EXPORTED_TARGETS})
+target_link_libraries(joy_pose_follower ${catkin_LIBRARIES})
 
-add_executable(rotors_joy_pose_interface src/joy_pose.cpp)
-add_dependencies(rotors_joy_pose_interface ${catkin_EXPORTED_TARGETS})
-target_link_libraries(rotors_joy_pose_interface ${catkin_LIBRARIES})
+add_executable(joy_pose src/joy_pose.cpp)
+add_dependencies(joy_pose ${catkin_EXPORTED_TARGETS})
+target_link_libraries(joy_pose ${catkin_LIBRARIES})
 
 
-install(TARGETS rotors_joy_pose_follower_interface rotors_joy_pose_interface
+install(TARGETS joy_pose_follower joy_pose
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+
+add_executable(follower_pose
+  include/rotors_utils/follower_pose.hpp
+  src/follower_pose.cpp
+)
+add_dependencies(follower_pose ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(follower_pose
+  ${catkin_LIBRARIES}
 )

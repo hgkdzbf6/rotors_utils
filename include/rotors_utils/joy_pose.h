@@ -27,6 +27,7 @@
 #include <std_srvs/Trigger.h>
 #include <sensor_msgs/Joy.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include "rotors_comm/SuccessiveControl.h"
 
 struct Axis
 {
@@ -60,7 +61,7 @@ struct Axes {
 struct Buttons {
   Button slow;
   Button go;
-  Button stop;
+  Button receive_image;
   Button interrupt;
   Button takeoff;
 } ;
@@ -73,6 +74,9 @@ struct Buttons {
 //   double thrust;
 // };
 
+/**
+* 功能: 产生command_pose
+*/
 class JoyPose {
   typedef sensor_msgs::Joy::_buttons_type ButtonType;
 
@@ -82,12 +86,15 @@ class JoyPose {
   ros::Subscriber joy_sub_;
 
   ros::ServiceClient taking_off_client_;
-  ros::ServiceClient taking_off2_client_;
+  ros::ServiceClient receive_image_client_;
+  ros::ServiceClient follower_pose_client_;
   
   std::string namespace_;
   double slow_factor_;
   Axes axes_;
   Buttons buttons_;
+  bool is_leader_;
+  bool fly_by_joy_;
 
   // mav_msgs::RollPitchYawrateThrust control_msg_;
   geometry_msgs::PoseStamped pose_;
@@ -114,6 +121,7 @@ class JoyPose {
   double GetAxis(const Axis &axis);
  public:
   JoyPose();
+  virtual ~JoyPose();
 };
 
 #endif // ROTORS_JOY_INTERFACE_JOY_POSE_H_

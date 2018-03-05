@@ -23,8 +23,11 @@
 
 #include <mav_msgs/default_topics.h>
 #include <geometry_msgs/PoseStamped.h>
+JoyPose::~JoyPose(){
+  
+}
 
-JoyPose::JoyPose():yaw_(0) {
+JoyPose::JoyPose():yaw_(0),fly_by_joy_(true) {
   ros::NodeHandle nh;
   ros::NodeHandle pnh("~");
 
@@ -47,11 +50,16 @@ JoyPose::JoyPose():yaw_(0) {
   pnh.param<double>("yaw_velocity_max", axes_.yaw.factor, 90.0);
 
   pnh.param<int>("slow_button", buttons_.slow.button, 4);
-  pnh.param<int>("go_button", buttons_.go.button, 1);
-  pnh.param<int>("stop_button", buttons_.stop.button, 2);
+  // 从机开始按照相对位置飞行
+  pnh.param<int>("go_button", buttons_.go.button, 3);
+  // 开始接收图像,然后获取到了相对位置
+  pnh.param<int>("receive_image_button", buttons_.receive_image.button, 2);
   pnh.param<int>("interrupt_button", buttons_.interrupt.button, 3);
+  // 起飞
   pnh.param<int>("take_off_button", buttons_.takeoff.button, 1);
   
+  pnh.param<bool>("is_leader",is_leader_,true);
+
   pnh.param<double>("slow_factor", slow_factor_, 0.2);
 
   pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped> ("command_pose", 10);
@@ -64,7 +72,8 @@ JoyPose::JoyPose():yaw_(0) {
   nh_.param<std::string>("base_stabilized_frame", base_stabilized_frame_, "base_stabilized");
 
   taking_off_client_ = nh_.serviceClient<std_srvs::Trigger>("taking_off");
-  taking_off2_client_ = nh_.serviceClient<std_srvs::Trigger>("taking_off2");
+  receive_image_client_ = nh_.serviceClient<std_srvs::Trigger>("receive_image");
+  follower_pose_client_=nh_.serviceClient<rotors_comm::SuccessiveControl>("follower_pose");
 
   joy_sub_ = nh_.subscribe("joy", 10, &JoyPose::JoyCallback, this);
 }
@@ -77,36 +86,55 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
   }else{
   }
 
-  if (GetButton(buttons_.stop)){
-    std_srvs::Trigger srv2;
-    if(taking_off2_client_.call(srv2)){
-      ROS_INFO("message: %s",srv2.response.message.c_str());
+  // 接收图像
+  if (GetButton(buttons_.receive_image)){
+    std_srvs::Trigger receive_image_srv;
+    if(receive_image_client_.call(receive_image_srv)){
+      ROS_INFO("message: %s",receive_image_srv.response.message.c_str());
     }else{
-      ROS_ERROR("Failed to call service add_two_ints");
+      ROS_ERROR("Failed to call service receive_image");
     }
   }
 
+  // 起飞
   if (GetButton(buttons_.takeoff)){
     std_srvs::Trigger srv;
     pose_.pose.position.z= take_off_height_ ;
     if(taking_off_client_.call(srv)){
       ROS_INFO("message: %s",srv.response.message.c_str());
     }else{
-      ROS_ERROR("Failed to call service add_two_ints");
+      ROS_ERROR("Failed to call service takeoff");
     }    
-//    ROS_INFO("taking off button pressed");
   }else{
     pose_.pose.position.z += GetAxis(axes_.z) * dt;
   }
 
+  // 从机飞行套路
+  if (GetButton(buttons_.go)){
+    ROS_INFO("wtf");
+    if(!is_leader_){
+      rotors_comm::SuccessiveControl follower_pose_srv;
+      follower_pose_srv.request.pose=pose_;
+      if(follower_pose_client_.call(follower_pose_srv)){
+        ROS_INFO("message: %s",follower_pose_srv.response.message.c_str());
+        fly_by_joy_=false;
+      }else{
+        ROS_ERROR("Failed to call service takeoff");
+      }    
+    }
+  }
+
   pose_.header.stamp = now;
   pose_.header.frame_id = world_frame_;
-  pose_.pose.position.x += (cos(yaw_) * GetAxis(axes_.x) - sin(yaw_) * GetAxis(axes_.y)) * dt;
-  pose_.pose.position.y += (cos(yaw_) * GetAxis(axes_.y) + sin(yaw_) * GetAxis(axes_.x)) * dt;
-  yaw_ += GetAxis(axes_.yaw) * M_PI/180.0 * dt /3;
-  tf2::Quaternion q;
-  q.setRPY(0.0, 0.0, yaw_);
-  pose_.pose.orientation = tf2::toMsg(q);
+  if(fly_by_joy_){
+    pose_.pose.position.x += (cos(yaw_) * GetAxis(axes_.x) - sin(yaw_) * GetAxis(axes_.y)) * dt;
+    pose_.pose.position.y += (cos(yaw_) * GetAxis(axes_.y) + sin(yaw_) * GetAxis(axes_.x)) * dt;
+    yaw_ += GetAxis(axes_.yaw) * M_PI/180.0 * dt /3;
+    tf2::Quaternion q;
+    q.setRPY(0.0, 0.0, yaw_);
+    pose_.pose.orientation = tf2::toMsg(q);
+  }
+  // 否则就不更新了
   pose_pub_.publish(pose_);
 }
 
