@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(rotors_utils)
 
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
 
@@ -9,6 +10,9 @@ project(rotors_utils)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS roscpp tf hector_uav_msgs geometry_msgs sensor_msgs rotors_comm nav_msgs)
 
+
+FIND_PACKAGE(Sophus REQUIRED)
+find_package(Eigen REQUIRED)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -100,11 +104,11 @@ find_package(catkin REQUIRED COMPONENTS
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES rotors_utils
+catkin_package( 
+  INCLUDE_DIRS include ${Eigen_INCLUDE_DIRS}
+ LIBRARIES rotors_utils
 #  CATKIN_DEPENDS other_catkin_pkg
-#  DEPENDS system_lib
+ DEPENDS Eigen Sophus
 )
 
 ###########
@@ -114,7 +118,10 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-  include ${catkin_INCLUDE_DIRS}
+  include 
+  ${catkin_INCLUDE_DIRS}
+  ${Sophus_INCLUDE_DIRS}
+  ${Eigen_INCLUDE_DIRS}
 # include
 # ${catkin_INCLUDE_DIRS}
 )
@@ -202,8 +209,8 @@ add_executable(transformation
   src/transformation.cpp
   include/rotors_utils/transformation.hpp
 )
-add_dependencies(transformation ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(transformation
+add_dependencies(transformation commonpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(transformation commonpp
   ${catkin_LIBRARIES}
 )
 
@@ -211,19 +218,19 @@ add_executable(trajectory_generation
   src/trajectory_generation.cpp
   include/rotors_utils/trajectory_generation.hpp
 )
-add_dependencies(trajectory_generation ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(trajectory_generation
+add_dependencies(trajectory_generation commonpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(trajectory_generation commonpp
   ${catkin_LIBRARIES}
 )
 
 
 add_executable(joy_pose_follower src/joy_pose_follower.cpp)
-add_dependencies(joy_pose_follower ${catkin_EXPORTED_TARGETS})
-target_link_libraries(joy_pose_follower ${catkin_LIBRARIES})
+add_dependencies(joy_pose_follower commonpp ${catkin_EXPORTED_TARGETS})
+target_link_libraries(joy_pose_follower commonpp ${catkin_LIBRARIES})
 
 add_executable(joy_pose src/joy_pose.cpp)
-add_dependencies(joy_pose ${catkin_EXPORTED_TARGETS})
-target_link_libraries(joy_pose ${catkin_LIBRARIES})
+add_dependencies(joy_pose commonpp ${catkin_EXPORTED_TARGETS})
+target_link_libraries(joy_pose commonpp ${catkin_LIBRARIES})
 
 
 install(TARGETS joy_pose_follower joy_pose
@@ -237,7 +244,15 @@ add_executable(follower_pose
   include/rotors_utils/follower_pose.hpp
   src/follower_pose.cpp
 )
-add_dependencies(follower_pose ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(follower_pose
+add_dependencies(follower_pose commonpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(follower_pose commonpp
+  ${catkin_LIBRARIES}
+)
+
+add_library(commonpp
+  include/rotors_utils/common.hpp
+)
+add_dependencies(commonpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(commonpp
   ${catkin_LIBRARIES}
 )

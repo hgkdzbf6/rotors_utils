@@ -6,7 +6,7 @@
 
 position_gain: {x: 4, y: 4, z: 4}
 velocity_gain: {x: 2.2, y: 2.2, z: 2.2}
-leader_position_gain: {x: 0.8 , y: 0.8 , z: 0.11 }
+leader_position_gain: {x: 4 , y: 4 , z: 0.11 }
 leader_velocity_gain: {x: 0.0 , y: 0.0, z: 0.0}
 attitude_gain: {x: 0.37, y: 0.37, z: 0.0135}
 angular_rate_gain: {x: 0.1, y: 0.1, z: 0.025}

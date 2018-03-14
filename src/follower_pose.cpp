@@ -48,6 +48,7 @@ void FollowerPose::relativeCallback(const geometry_msgs::PoseStampedConstPtr& ms
     pose_.pose.position.y=msg->pose.position.y;
     pose_.pose.position.z=msg->pose.position.z;
     new_data_approach_=true;
+    ROS_INFO_STREAM("x: "<<pose_.pose.position.x <<"   y: "<< pose_.pose.position.y <<"   z: "<< pose_.pose.position.z);
     if(!receive_first_msg_){
       ROS_INFO_ONCE("relative position callback received");
       receive_first_msg_=true;
