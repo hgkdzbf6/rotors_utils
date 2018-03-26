@@ -35,7 +35,7 @@ struct Circle{
 	// 已经流逝的时间
 	float t_;
 	Circle():is_initialized_(false){}
-	Circle(geometry_msgs::PoseStamped pose, float T=1000):T_(T),t_(0),theta_(0),is_initialized_(true){
+	Circle(geometry_msgs::PoseStamped pose, float T=100):T_(T),t_(0),theta_(0),is_initialized_(true){
 		radius2_=pose.pose.position.x*pose.pose.position.x+pose.pose.position.y*pose.pose.position.y;
 		radius_=sqrt(radius2_);
 		theta0_=atan2(pose.pose.position.y,pose.pose.position.x);

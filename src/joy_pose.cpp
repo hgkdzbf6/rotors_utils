@@ -27,7 +27,7 @@ JoyPose::~JoyPose(){
   
 }
 
-JoyPose::JoyPose():yaw_(0),fly_by_joy_(true) {
+JoyPose::JoyPose():fly_by_joy_(true),yaw_(0) {
   ros::NodeHandle nh;
   ros::NodeHandle pnh("~");
 
@@ -75,25 +75,21 @@ JoyPose::JoyPose():yaw_(0),fly_by_joy_(true) {
   receive_image_client_ = nh_.serviceClient<std_srvs::Trigger>("receive_image");
   follower_pose_client_=nh_.serviceClient<rotors_comm::SuccessiveControl>("follower_pose");
 
+  target_pose_sub_ = nh_.subscribe("/hummingbird0/target_pose",10,&JoyPose::TargetPoseCallback,this);
   joy_sub_ = nh_.subscribe("joy", 10, &JoyPose::JoyCallback, this);
 }
 
+void JoyPose::TargetPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg){
+  target_pose_=*msg;
+}
+
 void JoyPose::TimerCallback(const ros::TimerEvent& e){
+  static bool fly_by_joy_switch=false;
   ros::Time now=ros::Time::now();
   double dt=0.0;
   if (!pose_.header.stamp.isZero()) {
 	  dt = std::max(0.01, std::min(1.0, (now - pose_.header.stamp).toSec()));
   }else{
-  }
-
-  // 接收图像
-  if (GetButton(buttons_.receive_image)){
-    std_srvs::Trigger receive_image_srv;
-    if(receive_image_client_.call(receive_image_srv)){
-      ROS_INFO("message: %s",receive_image_srv.response.message.c_str());
-    }else{
-      ROS_ERROR("Failed to call service receive_image");
-    }
   }
 
   // 起飞
@@ -109,6 +105,16 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
     pose_.pose.position.z += GetAxis(axes_.z) * dt;
   }
 
+  // 接收图像
+  if (GetButton(buttons_.receive_image)){
+    std_srvs::Trigger receive_image_srv;
+    if(receive_image_client_.call(receive_image_srv)){
+      ROS_INFO("message: %s",receive_image_srv.response.message.c_str());
+    }else{
+      ROS_ERROR("Failed to call service receive_image");
+    }
+  }
+
   // 从机飞行套路
   if (GetButton(buttons_.go)){
     ROS_INFO("wtf");
@@ -117,13 +123,13 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
       follower_pose_srv.request.pose=pose_;
       if(follower_pose_client_.call(follower_pose_srv)){
         ROS_INFO("message: %s",follower_pose_srv.response.message.c_str());
-        fly_by_joy_=false;
+        if(fly_by_joy_switch)fly_by_joy_=false;
+        fly_by_joy_switch=true;
       }else{
         ROS_ERROR("Failed to call service takeoff");
       }    
     }
   }
-
   pose_.header.stamp = now;
   pose_.header.frame_id = world_frame_;
   if(fly_by_joy_){
@@ -133,18 +139,25 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
     tf2::Quaternion q;
     q.setRPY(0.0, 0.0, yaw_);
     pose_.pose.orientation = tf2::toMsg(q);
+  } else if(!is_leader_){
+    // 这边注释掉，follower就停掉了。
+    pose_.pose.position.x=target_pose_.pose.position.x;
+    pose_.pose.position.y=target_pose_.pose.position.y;
+    pose_.pose.position.z=take_off_height_;
+
+    // ROS_INFO_STREAM("pose_:"<<std::endl<<pose_<<std::endl);
   }
   // 否则就不更新了
+  // 从pose中获得x^L2_d,f
   pose_pub_.publish(pose_);
 }
-
 
 void JoyPose::JoyCallback(const sensor_msgs::JoyConstPtr& joy) {
   current_joy_ = *joy;
 }
 
 double JoyPose::GetAxis(const Axis &axis){
-  if (axis.axis == 0 || std::abs(axis.axis) > current_joy_.axes.size())
+  if (axis.axis == 0 || ( static_cast<uint>(std::abs(axis.axis)) > current_joy_.axes.size()) )
   {
 //    ROS_ERROR_STREAM("Axis " << axis.axis << " out of range, joy has " << current_joy_.axes.size() << " axes");
     return 0;
@@ -160,7 +173,7 @@ double JoyPose::GetAxis(const Axis &axis){
 
 bool JoyPose::GetButton( const Button &button)
 {
-  if (button.button <= 0 || button.button > current_joy_.buttons.size())
+  if (button.button <= 0 || static_cast<uint>(button.button) > current_joy_.buttons.size())
   {
     return false;
   }
@@ -175,3 +188,4 @@ int main(int argc, char** argv) {
   ros::spin();
   return 0;
 }
+

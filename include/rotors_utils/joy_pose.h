@@ -28,6 +28,7 @@
 #include <sensor_msgs/Joy.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "rotors_comm/SuccessiveControl.h"
+#include "rotors_utils/common.hpp"
 
 struct Axis
 {
@@ -83,7 +84,8 @@ class JoyPose {
  private:
   ros::NodeHandle nh_;
   ros::Publisher pose_pub_;
-  ros::Subscriber joy_sub_;
+  ros::Subscriber joy_sub_; 
+  ros::Subscriber target_pose_sub_;
 
   ros::ServiceClient taking_off_client_;
   ros::ServiceClient receive_image_client_;
@@ -98,6 +100,7 @@ class JoyPose {
 
   // mav_msgs::RollPitchYawrateThrust control_msg_;
   geometry_msgs::PoseStamped pose_;
+  geometry_msgs::PoseStamped target_pose_;
   sensor_msgs::Joy current_joy_;
 
   double take_off_height_;
@@ -115,6 +118,7 @@ class JoyPose {
   // bool is_fixed_wing_;
   void TimerCallback(const ros::TimerEvent& e);
   void JoyCallback(const sensor_msgs::JoyConstPtr& msg);
+  void TargetPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg);
   // void SetButton(const );
   // void SetAxis();
   bool GetButton(const Button & button);

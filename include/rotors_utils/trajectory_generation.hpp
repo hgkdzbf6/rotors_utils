@@ -1,20 +1,12 @@
 #ifndef ROTORS_UTILS_TRAJECTORY_GENERATION_H_
 #define ROTORS_UTILS_TRAJECTORY_GENERATION_H_
 
-#include <geometry_msgs/Vector3Stamped.h>
 #include <ros/ros.h>
-#include <sensor_msgs/MagneticField.h>
-#include <sensor_msgs/Imu.h>
 #include <tf/tf.h>
 #include <ros/timer.h>
-#include <tf/transform_datatypes.h>
-#include <sensor_msgs/FluidPressure.h>
-#include <hector_uav_msgs/Altimeter.h>
-#include <nav_msgs/Odometry.h>
-#include <geometry_msgs/TwistStamped.h>
-#include <std_srvs/Trigger.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/PoseStamped.h>
+#include "rotors_utils/common.hpp"
 
 // 这个类的作用是生成轨迹,输入是目标位置和当前位置,以及时间戳
 // 输出是下一个时刻的目标位置
@@ -22,15 +14,41 @@
 class TrajectoryGeneration{
 private:
   ros::NodeHandle nh_;
-
   ros::Timer timer_;
-  ros::Subscriber follower_sub_;
-  ros::Publisher follower_pub_;
 
-  geometry_msgs::PoseStamped ps_;
+  ros::Publisher follower_pub_;
+  ros::Subscriber T_L2_F2_sub_;
+  ros::Subscriber T_LS_L2_sub_;
+  ros::Subscriber T_FS_F2_sub_;
+  ros::Subscriber T_L2_dF2_sub_;
+
+  geometry_msgs::PoseStamped pose_;
+  
+  Sophus::SE3 T_LS_LW_;
+  Sophus::SE3 T_FS_FW_;
+  Sophus::SE3 T_LW_FW_;
+  Sophus::SE3 T_LS_L2_;
+  Sophus::SE3 T_L2_F2_;
+  Sophus::SE3 T_FS_F2_;
+  Sophus::SE3 T_FW_dF2_;
+  Sophus::SE3 T_L2_dF2_;
+
+  Sophus::Sim3 S_LS_LW_;
+  Sophus::Sim3 S_FS_FW_;
+  Sophus::Sim3 S_LW_FW_;
+  Sophus::Sim3 S_LS_L2_;
+  Sophus::Sim3 S_L2_F2_;
+  Sophus::Sim3 S_FS_F2_;
+  Sophus::Sim3 S_FW_dF2_;
+  Sophus::Sim3 S_L2_dF2_;
+
   void TimerCallback(const ros::TimerEvent & e);
   void RelativePositionCallback(const geometry_msgs::PoseStampedConstPtr& msg);
 
+void T_L2_F2Callback(const geometry_msgs::PoseStampedConstPtr& msg);
+void T_LS_L2Callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg);
+void T_FS_F2Callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg);
+void T_L2_dF2Callback(const geometry_msgs::PoseStampedConstPtr& msg);
 public:
   TrajectoryGeneration();
 };

@@ -6,48 +6,33 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#include "sophus/se3.h"
-#include "sophus/so3.h"
+#include <sophus/so3.h>
+#include <sophus/se3.h>
+#include <sophus/scso3.h>
+#include <sophus/sim3.h>
 
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Pose.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 using namespace std;
 
-static void tfPoseStamped2Rt(const geometry_msgs::PoseStamped& pose,
-    Sophus::SO3& R,Eigen::Vector3d& t
-)
-{
-    tfPose2RT(pose.pose,R,t);
-}
+#define LEADER_INDEX 0
+#define FOLLOWER_INDEX 1
+static const string BASE_NS="hummingbird";
+static const string LEADER_NS= BASE_NS + to_string(LEADER_INDEX);
+static const string FOLLOWER_NS=BASE_NS + to_string(FOLLOWER_INDEX);
 
-static void tfPoseStamped2SE3(const geometry_msgs::PoseStamped& pose,
-    Sophus::SE3& T 
-){
-    tfPose2SE3(pose.pose,T);
-}
+void geoPose2Rt(const geometry_msgs::Pose& pose, Sophus::SO3& R,  Eigen::Vector3d& t);
+void geoPose2SE3(const geometry_msgs::Pose& pose, Sophus::SE3& T);
+void geoPoseStamped2Rt(const geometry_msgs::PoseStamped& pose,  Sophus::SO3& R,Eigen::Vector3d& t);
+void geoPoseStamped2SE3(const geometry_msgs::PoseStamped& pose,  Sophus::SE3& T);
+void SE32geoPose(const Sophus::SE3& T, geometry_msgs::Pose& pose);
 
-static void tfPose2SE3(const geometry_msgs::Pose& pose, Sophus::SE3& T)
-{
-    Sophus::SO3& R;
-    Eigen::Vector3d& t;
-    tfPose2SE3(pose,R,t);
-    T=Sophus::SE3(R,t);
-}
+void geoPose2Sim3(const geometry_msgs::Pose& pose, Sophus::Sim3& S);
+void geoPose2Sim3(const geometry_msgs::Pose& pose, double s, Sophus::Sim3& S);
+void geoPoseStamped2Sim3(const geometry_msgs::PoseStamped& pose, Sophus::Sim3& S);
+void Sim32geoPose(const Sophus::Sim3& S, geometry_msgs::Pose& pose);
+void Sim32geoPoseStamped(const Sophus::Sim3& S,geometry_msgs::PoseStamped& pose);
 
-static void tfPose2Rt(const geometry_msgs::Pose& pose, Sophus::SO3& R,
-    Eigen::Vector3d& t)
-{
-    t(0)=pose.position.x;
-    t(1)=pose.position.y;
-    t(2)=pose.position.z;
-    Eigen::Quaterniond q(
-        pose.orientation.w,
-        pose.orientation.x,
-        pose.orientation.y,
-        pose.orientation.z
-    );
-    R=q.matrix();
-}
-
+void SE32Sim3(const Sophus::SE3& T, const double s, Sophus::Sim3& S);
 #endif

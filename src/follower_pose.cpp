@@ -27,8 +27,9 @@ void FollowerPose::TimerCallback(const ros::TimerEvent& e){
       if(dt>0.2) dt=0.2;
       if(circle_.is_initialized_){
         if(new_data_approach_){
+          // 这里产生x^L2_d,F
           circle_.update(dt);
-          new_data_approach_=false;
+          // new_data_approach_=false;
         }
         // 在需要发布的时候更新时间
         command_pub_.publish(circle_.pose_);
@@ -48,12 +49,12 @@ void FollowerPose::relativeCallback(const geometry_msgs::PoseStampedConstPtr& ms
     pose_.pose.position.y=msg->pose.position.y;
     pose_.pose.position.z=msg->pose.position.z;
     new_data_approach_=true;
-    ROS_INFO_STREAM("x: "<<pose_.pose.position.x <<"   y: "<< pose_.pose.position.y <<"   z: "<< pose_.pose.position.z);
+    // ROS_INFO_STREAM("x: "<<pose_.pose.position.x <<"   y: "<< pose_.pose.position.y <<"   z: "<< pose_.pose.position.z);
     if(!receive_first_msg_){
       ROS_INFO_ONCE("relative position callback received");
       receive_first_msg_=true;
       circle_=Circle(pose_);
-      ROS_INFO_STREAM("x: "<<pose_.pose.position.x <<"   y: "<< pose_.pose.position.y<< "circle.radius: "<<circle_.radius_);
+      // ROS_INFO_STREAM("x: "<<pose_.pose.position.x <<"   y: "<< pose_.pose.position.y<< "circle.radius: "<<circle_.radius_);
     }
   }
 }
@@ -68,7 +69,6 @@ bool FollowerPose::callback(rotors_comm::SuccessiveControl::Request& request,
 	response.success=true;
   return true;
 }
-
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "follower_pose");
