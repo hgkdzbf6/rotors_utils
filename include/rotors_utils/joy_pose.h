@@ -109,6 +109,7 @@ class JoyPose {
   std::string base_link_frame_;
   std::string world_frame_;
   std::string base_stabilized_frame_;
+  std::string target_pose_str_;
   double yaw_;
   // Max max_;
 

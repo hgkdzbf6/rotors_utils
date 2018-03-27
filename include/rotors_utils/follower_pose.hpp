@@ -54,8 +54,8 @@ struct Circle{
 		}
 		assert(t_>=0);
 		theta_=t_/T_*2*MY_PI;
-		pose_.pose.position.x=cos(theta_+theta0_)*radius_;
-		pose_.pose.position.y=sin(theta_+theta0_)*radius_;
+		pose_.pose.position.x=-cos(theta_+theta0_)*radius_;
+		pose_.pose.position.y=-sin(theta_+theta0_)*radius_;
 		pose_.pose.position.z=pose_base_.pose.position.z;
 		// 在需要发布的时候更新时间
 		pose_.header.stamp=ros::Time::now();

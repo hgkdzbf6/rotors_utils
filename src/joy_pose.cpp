@@ -75,7 +75,8 @@ JoyPose::JoyPose():fly_by_joy_(true),yaw_(0) {
   receive_image_client_ = nh_.serviceClient<std_srvs::Trigger>("receive_image");
   follower_pose_client_=nh_.serviceClient<rotors_comm::SuccessiveControl>("follower_pose");
 
-  target_pose_sub_ = nh_.subscribe("/hummingbird0/target_pose",10,&JoyPose::TargetPoseCallback,this);
+  pnh.param<std::string>("target_pose",target_pose_str_,"/hummingbird0/target_pose");
+  target_pose_sub_ = nh_.subscribe(target_pose_str_,10,&JoyPose::TargetPoseCallback,this);
   joy_sub_ = nh_.subscribe("joy", 10, &JoyPose::JoyCallback, this);
 }
 
@@ -145,7 +146,7 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
     pose_.pose.position.y=target_pose_.pose.position.y;
     pose_.pose.position.z=take_off_height_;
 
-    // ROS_INFO_STREAM("pose_:"<<std::endl<<pose_<<std::endl);
+    ROS_INFO_STREAM("pose_:"<<std::endl<<pose_<<std::endl);
   }
   // 否则就不更新了
   // 从pose中获得x^L2_d,f

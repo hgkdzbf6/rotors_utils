@@ -15,6 +15,8 @@ class TrajectoryGeneration{
 private:
   ros::NodeHandle nh_;
   ros::Timer timer_;
+  int my_id_;
+  int follower_id_;
 
   ros::Publisher follower_pub_;
   ros::Subscriber T_L2_F2_sub_;
@@ -22,6 +24,12 @@ private:
   ros::Subscriber T_FS_F2_sub_;
   ros::Subscriber T_L2_dF2_sub_;
 
+  std::string T_L2_F2_str_;
+  std::string T_LS_L2_str_;
+  std::string T_FS_F2_str_;
+  std::string T_L2_dF2_str_;
+  std::string T_FW_dF2_str_;
+  
   geometry_msgs::PoseStamped pose_;
   
   Sophus::SE3 T_LS_LW_;

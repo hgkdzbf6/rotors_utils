@@ -3,14 +3,14 @@
 FollowerPose::FollowerPose():receive_first_msg_(false),follower_pose_start_(false)
 {
   ros::NodeHandle pnh("~");
-  pnh.param<std::string>("relative_str",relative_str_,"relative_position01");
+  pnh.param<std::string>("relative_pose",relative_str_,"relative_pose01");
   pnh.param<bool>("is_leader",is_leader_,true);
 
   server_= nh_.advertiseService("follower_pose", &FollowerPose::callback,this);  
  
   relative_sub_=nh_.subscribe(relative_str_,5,&FollowerPose::relativeCallback,this);
   timer_=nh_.createTimer(ros::Duration(0.1),&FollowerPose::TimerCallback,this);
-  command_pub_=nh_.advertise<geometry_msgs::PoseStamped>("leader_desired_position", 10);
+  command_pub_=nh_.advertise<geometry_msgs::PoseStamped>("leader_desired_pose", 10);
 }
 
 FollowerPose::~FollowerPose()

@@ -1,0 +1,56 @@
+<!-- this is for svo -->
+<launch>
+  <arg name="mav_index1" default="0"/>
+  <arg name="mav_index2" default="1"/>
+  <arg name="mav_index3" default="2"/>
+  <arg name="world_name" default="map3_world"/>
+  <!-- <arg name="log_file" default="$(arg mav_name)" />-->
+  <arg name="debug" default="false"/>
+  <arg name="gui" default="true"/>
+  <arg name="paused" default="false"/>
+  <arg name="feature_type" default="orb" />
+  <arg name="control_use_true_value" default="true"/>
+  <!-- The following line causes gzmsg and gzerr messages to be printed to the console
+      (even when Gazebo is started through roslaunch) -->
+  <arg name="verbose" default="false"/>
+
+  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models"/>
+  <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find rotors_gazebo)/worlds/$(arg world_name).world" />
+    <arg name="debug" value="$(arg debug)" />
+    <arg name="paused" value="$(arg paused)" />
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="verbose" value="$(arg verbose)"/>
+  </include>
+
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rotors_gazebo)/rviz/sim_two_svo.rviz"/>
+  <!--<node pkg="rotors_joy_interface" type="rotors_joy_interface" name="joy" output="screen"/>-->
+
+  <include file="$(find rotors_utils)/launch/single_svo.launch">
+    <arg name="index" value="$(arg mav_index1)" />
+    <arg name="follower_index" value="$(arg mav_index2)" />
+    <arg name="x" value="-1.2"/>
+    <arg name="y" value="-1.2"/>
+    <arg name="z" value="0.1"/>
+    <arg name="feature_type" value="$(arg feature_type)"/>
+    <arg name="is_leader" value="true" />
+  </include>
+
+  <include file="$(find rotors_utils)/launch/single_svo.launch">
+    <arg name="index" value="$(arg mav_index2)" />
+    <arg name="follower_index" value="$(arg mav_index1)" />
+    <arg name="x" value="1.2"/>
+    <arg name="y" value="1.2"/>
+    <arg name="z" value="0.1"/>
+    <arg name="feature_type" value="$(arg feature_type)"/>
+    <arg name="is_leader" value="false" />
+  </include>
+  <!-- <include file="$(find rotors_gazebo)/launch/test_single_svo.launch">
+    <arg name="mav_name" value="$(arg mav_name3)" />
+    <arg name="x" value="-1.5"/>
+    <arg name="y" value="1.5"/>
+    <arg name="z" value="0.1"/>
+  </include>-->
+  <!-- <node pkg="rosbag" type="record"  name="record"  args="-o /home/zbf/Desktop/haha.bag hummingbird/svo/pose hummingbird/svo/fusion_pose hummingbird/odometry_pub_frame  hummingbird/odometry_sensor1/odometry" output="screen"/>-->
+</launch>

@@ -16,12 +16,6 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 using namespace std;
 
-#define LEADER_INDEX 0
-#define FOLLOWER_INDEX 1
-static const string BASE_NS="hummingbird";
-static const string LEADER_NS= BASE_NS + to_string(LEADER_INDEX);
-static const string FOLLOWER_NS=BASE_NS + to_string(FOLLOWER_INDEX);
-
 void geoPose2Rt(const geometry_msgs::Pose& pose, Sophus::SO3& R,  Eigen::Vector3d& t);
 void geoPose2SE3(const geometry_msgs::Pose& pose, Sophus::SE3& T);
 void geoPoseStamped2Rt(const geometry_msgs::PoseStamped& pose,  Sophus::SO3& R,Eigen::Vector3d& t);
@@ -35,4 +29,18 @@ void Sim32geoPose(const Sophus::Sim3& S, geometry_msgs::Pose& pose);
 void Sim32geoPoseStamped(const Sophus::Sim3& S,geometry_msgs::PoseStamped& pose);
 
 void SE32Sim3(const Sophus::SE3& T, const double s, Sophus::Sim3& S);
+
+template<typename T> inline void GetRosParameter(const ros::NodeHandle& nh,
+                                                 const std::string& key,
+                                                 const T& default_value,
+                                                 T* value) {
+  ROS_ASSERT(value != nullptr);
+  bool have_parameter = nh.getParam(key, *value);
+  if (!have_parameter) {
+    ROS_WARN_STREAM("[rosparam]: could not find parameter " << nh.getNamespace()
+                    << "/" << key << ", setting to default: " << default_value);
+    *value = default_value;
+  }
+}
+
 #endif
