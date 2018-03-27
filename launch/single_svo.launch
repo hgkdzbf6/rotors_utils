@@ -37,13 +37,13 @@
       <arg name="z" value="$(arg z)"/>
     </include>
 
-    <!--通过接收两副图像，来确定相对位置，接受的参数是：拓扑结构，自身节点的消息-->
-    <node name="$(arg feature_type)_main" pkg="sift" type="$(arg feature_type)" output="screen">
-      <!--载入拓扑结构数据-->
-      <param name="uav_index" value="$(arg index)"/>
-      <param name="other_index" value="$(arg follower_index)"/>
-      <rosparam command="load" file="$(find rotors_utils)/params/topology.yaml" />
-    </node>
+    <include file="$(find rotors_utils)/launch/relative.launch">
+      <arg name="mav_name" default="$(arg mav_name)"/>
+      <arg name="feature_type" default="$(arg feature_type)"/>
+      <arg name="is_leader" default="$(arg is_leader)" />
+      <arg name="index" default="$(arg index)"/>
+      <arg name="other_index" default="$(arg follower_index)"/>
+    </include>
 
     <!--控制器 -->
     <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen" >
@@ -51,7 +51,7 @@
       <rosparam command="load" file="$(find rotors_utils)/params/$(arg model_name).yaml" />
       <remap from="odometry" to="odometry_sensor1/odometry" if="$(arg control_use_true_value)"/>
       <remap from="odometry" to="odometry_pub_frame" unless="$(arg control_use_true_value)"/>
-      <param name="relative_pose" value="relative_pose$(arg index)$(arg follower_index)"/> 
+      <!-- <param name="relative_pose" value="relative_pose$(arg index)$(arg follower_index)"/> -->
       <param name="take_off_height" value="$(arg take_off_height)-2" />
     </node>
 
@@ -71,21 +71,8 @@
     <!--手柄的具体动作-->
     <node name="joy_control" pkg="rotors_gazebo" type="joy_control" output="screen" >
     </node>
-    <node name="follower_pose" pkg="rotors_utils" type="follower_pose" output="screen"  >
-      <param name="relative_pose" value="relative_pose$(arg index)$(arg follower_index)" />
-      <param name="is_leader" value="$(arg is_leader)" />
-    </node>
-    <!--follower节点的期望值计算节点-->
-    <node name="trajectory_generation" pkg="rotors_utils" type="trajectory_generation" output="screen" if="$(arg is_leader)">
-      <param name="my_id" value="$(arg index)"/>
-      <param name="follower_id" value="$(arg follower_index)"/>
-      <param name="T_L2_F2" value="relative_pose$(arg index)$(arg follower_index)"/>
-      <param name="T_LS_L2" value="svo/fusion_pose"/>
-      <param name="T_FS_F2" value="/$(arg mav_name)$(arg follower_index)/svo/fusion_pose"/>
-      <param name="T_L2_dF2" value="/$(arg mav_name)$(arg follower_index)/leader_desired_pose"/>
-      <param name="T_FW_dF2" value="target_pose"/>
-    </node>
 
+    <!--功能是各种信息数据类型的转化-->
     <node name="transformation" pkg="rotors_utils" type="transformation" output="screen" >
       <param name="mag_sub_frame" value="magnetometer" />
       <param name="mag_pub_frame" value="mag" />
