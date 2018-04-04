@@ -1,7 +1,11 @@
 <!-- this is for svo -->
 <launch>
   <arg name="index" default="0" />
+  <arg name="topology_size" default="3" />
+  <arg name="topology_config" default="0 0 0 1 0 0 1 0 0" />
   <arg name="follower_index" default="1" />
+  <arg name="follower_index_2" default="-1" />
+  <arg name="follower_index_3" default="-1" />
   <arg name="mav_name" default="hummingbird"/>
   <arg name="model_name" default="hummingbird"/>
   <arg name="enable_logging" default="false" />
@@ -37,12 +41,28 @@
       <arg name="z" value="$(arg z)"/>
     </include>
 
-    <include file="$(find rotors_utils)/launch/relative.launch">
+    <include file="$(find rotors_utils)/launch/relative.launch" unless="$(eval arg('follower_index') ==-1)">
       <arg name="mav_name" default="$(arg mav_name)"/>
       <arg name="feature_type" default="$(arg feature_type)"/>
       <arg name="is_leader" default="$(arg is_leader)" />
       <arg name="index" default="$(arg index)"/>
       <arg name="other_index" default="$(arg follower_index)"/>
+    </include>
+
+    <include file="$(find rotors_utils)/launch/relative.launch" unless="$(eval arg('follower_index_2') ==-1)">
+      <arg name="mav_name" default="$(arg mav_name)"/>
+      <arg name="feature_type" default="$(arg feature_type)"/>
+      <arg name="is_leader" default="$(arg is_leader)" />
+      <arg name="index" default="$(arg index)"/>
+      <arg name="other_index" default="$(arg follower_index_2)"/>
+    </include>
+
+    <include file="$(find rotors_utils)/launch/relative.launch" unless="$(eval arg('follower_index_3') ==-1)">
+      <arg name="mav_name" default="$(arg mav_name)"/>
+      <arg name="feature_type" default="$(arg feature_type)"/>
+      <arg name="is_leader" default="$(arg is_leader)" />
+      <arg name="index" default="$(arg index)"/>
+      <arg name="other_index" default="$(arg follower_index_3)"/>
     </include>
 
     <!--控制器 -->
@@ -51,7 +71,6 @@
       <rosparam command="load" file="$(find rotors_utils)/params/$(arg model_name).yaml" />
       <remap from="odometry" to="odometry_sensor1/odometry" if="$(arg control_use_true_value)"/>
       <remap from="odometry" to="odometry_pub_frame" unless="$(arg control_use_true_value)"/>
-      <!-- <param name="relative_pose" value="relative_pose$(arg index)$(arg follower_index)"/> -->
       <param name="take_off_height" value="$(arg take_off_height)-2" />
     </node>
 
@@ -63,9 +82,13 @@
     <!--或许这边应该换个控制器?-->
     <!--算了不用了,改手柄的command_control吧-->
     <node name="joy_pose" pkg="rotors_utils" type="joy_pose"  output="screen" >
+      <param name="my_id" value="$(arg index)"/>
+      <param name="follower_id" value="$(arg follower_index)"/>
       <param name="is_leader" value="$(arg is_leader)" />
       <param name="take_off_height" value="$(arg take_off_height)" />
-      <param name="target_pose" value="/$(arg mav_name)$(arg follower_index)/target_pose" />
+      <!--<param name="target_pose" value="/$(arg mav_name)$(arg follower_index)/target_pose"
+        unless="$(eval arg('follower_index') ==0)"/>-->
+      <param name="target_pose" value="/$(arg mav_name)$(arg follower_index)/target_pose"/>
     </node>
     
     <!--手柄的具体动作-->
@@ -82,7 +105,6 @@
      <node pkg="rotors_position_estimator" type="pose_estimation" name="position_estimation" output="screen" >
       <rosparam file="$(find rotors_position_estimator)/params/simulation.yaml" />
       <param name="nav_frame" value="/nav" />
-      <!--<param name="base_frame" value="$(arg mav_name)$(arg index)/base_link" />-->
       <param name="publish_world_nav_transform" value="true" />
       <remap from="raw_imu" to="imu" />
       <!--<remap from="fix" to="gps"/>-->

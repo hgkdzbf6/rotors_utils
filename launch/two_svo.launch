@@ -31,7 +31,7 @@
     <arg name="index" value="$(arg mav_index1)" />
     <arg name="follower_index" value="$(arg mav_index2)" />
     <arg name="x" value="-1.2"/>
-    <arg name="y" value="-1.2"/>
+    <arg name="y" value="0"/>
     <arg name="z" value="0.1"/>
     <arg name="feature_type" value="$(arg feature_type)"/>
     <arg name="is_leader" value="true" />
@@ -41,7 +41,7 @@
     <arg name="index" value="$(arg mav_index2)" />
     <arg name="follower_index" value="$(arg mav_index1)" />
     <arg name="x" value="1.2"/>
-    <arg name="y" value="1.2"/>
+    <arg name="y" value="0"/>
     <arg name="z" value="0.1"/>
     <arg name="feature_type" value="$(arg feature_type)"/>
     <arg name="is_leader" value="false" />

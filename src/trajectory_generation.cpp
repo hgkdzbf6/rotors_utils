@@ -9,7 +9,7 @@ TrajectoryGeneration::TrajectoryGeneration(){
   pnh.param<int>("follower_id",follower_id_,1);
   // 这边的参数是瞎写的，以launch为准
   pnh.param<std::string>("T_L2_F2",T_L2_F2_str_,"relative_pose01");
-  pnh.param<std::string>("T_LS_L2",T_LS_L2_str_,"svo/fusion_pose");
+  pnh.param<std::string>("T_LS_L2",T_LS_L2_str_,"/hummingbird0/svo/fusion_pose");
   pnh.param<std::string>("T_FS_F2",T_FS_F2_str_,"/hummingbird1/svo/fusion_pose");
   pnh.param<std::string>("T_L2_dF2",T_L2_dF2_str_,"/hummingbird1/leader_desired_pose");
   pnh.param<std::string>("T_FW_dF2",T_FW_dF2_str_,"target_pose");
@@ -29,8 +29,7 @@ TrajectoryGeneration::TrajectoryGeneration(){
   // 最后输出的位置。应该给控制器的。
   follower_pub_=nh_.advertise<geometry_msgs::PoseStamped>(T_FW_dF2_str_,5);
   timer_=nh_.createTimer(ros::Duration(0.1),&TrajectoryGeneration::TimerCallback,this);
-
-
+  // 这里进行了修改，原来是1 ，现在是0
   Eigen::Matrix3d R=Eigen::AngleAxisd(M_PI,Eigen::Vector3d(1,0,0)).toRotationMatrix();
   Eigen::Vector3d t(0,0,0);
   // ROS_INFO_STREAM("R:"<<std::endl<<R<<std::endl);
@@ -47,6 +46,7 @@ void TrajectoryGeneration::T_L2_F2Callback(const geometry_msgs::PoseStampedConst
   if(!T_L_switch){
     geoPoseStamped2SE3(*msg,T_LW_FW_);
     SE32Sim3(T_LW_FW_,1,S_LW_FW_);
+    ROS_INFO_STREAM("first message come: "<<T_LW_FW_<<std::endl);
   }
   T_L_switch=true;
   // 其他时候获取L2_F2
@@ -78,7 +78,9 @@ void TrajectoryGeneration::TimerCallback(const ros::TimerEvent & e){
   // 应该是上面的定时器的问题。
   // S_F_dF_ = S_L_F_ * S_L2_L_ * S_L2_dF_.inverse();  
   // S_LW_FW_ = S_LS_LW_.inverse() * S_LS_L2_ * S_L2_F2_ * S_FS_F2_.inverse() * S_FS_FW_;
-  S_FW_dF2_ = S_LW_FW_.inverse() * S_LS_LW_.inverse() * S_LS_L2_ * S_L2_dF2_;
+  // S_FW_dF2_ = S_LW_FW_.inverse() * S_LS_LW_.inverse() * S_LS_L2_ * S_L2_dF2_;
+  S_FW_dF2_ = S_LW_FW_.inverse() * S_LS_LW_.inverse() * S_FS_F2_ * S_L2_dF2_;
+  // S_FW_dF2_ = S_LW_FW_.inverse() * S_L2_dF2_;
   // S_L_F_ = T_L_F 
   // S_F_dF_ = S_L_F_.inverse() * S_L2_dF_;
   T_FW_dF2_=S_FW_dF2_.to_SE3();
@@ -89,16 +91,16 @@ void TrajectoryGeneration::TimerCallback(const ros::TimerEvent & e){
   // ROS_INFO_STREAM("S_FS_F2_:"<<std::endl<<S_FS_F2_<<std::endl);
   // ROS_INFO_STREAM("S_L2_dF2_:"<<std::endl<<S_L2_dF2_<<std::endl);
 
-  // ROS_INFO_STREAM("S_LW_FW_:"<<std::endl<<S_LW_FW_<<std::endl);
+  ROS_INFO_STREAM("S_LW_FW_.inverse():"<<std::endl<<S_LW_FW_.inverse()<<std::endl);
   // ROS_INFO_STREAM("S_LS_LW_.inverse():"<<std::endl<<S_LS_LW_.inverse()<<std::endl);
-  // ROS_INFO_STREAM("S_LS_L2_:"<<std::endl<<S_LS_L2_<<std::endl);
-  // ROS_INFO_STREAM("S_L2_dF2_:"<<std::endl<<S_L2_dF2_<<std::endl);
-  // ROS_INFO_STREAM("S_FW_dF2_:"<<std::endl<<S_FW_dF2_<<std::endl);
+  ROS_INFO_STREAM("S_LS_L2_:"<<std::endl<<S_LS_L2_<<std::endl);
+  ROS_INFO_STREAM("S_L2_dF2_:"<<std::endl<<S_L2_dF2_<<std::endl);
+  ROS_INFO_STREAM("S_FW_dF2_:"<<std::endl<<S_FW_dF2_<<std::endl);
   follower_pub_.publish(pose_);
 }
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "rotors_joy_interface");
+  ros::init(argc, argv, "rotors_joy_interface"); 
   TrajectoryGeneration trajectory_generation;
   ros::spin();
   return 0;

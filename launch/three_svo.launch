@@ -1,7 +1,7 @@
 <!-- this is for svo -->
 <launch>
   <arg name="mav_index1" default="0"/>
-  <arg name="mav_index2" default="1"/>
+  <arg name="mav_index2" default="-1"/>
   <arg name="mav_index3" default="2"/>
   <arg name="world_name" default="map3_world"/>
   <!-- <arg name="log_file" default="$(arg mav_name)" />-->
@@ -27,21 +27,32 @@
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rotors_gazebo)/rviz/sim_two_svo.rviz"/>
   <!--<node pkg="rotors_joy_interface" type="rotors_joy_interface" name="joy" output="screen"/>-->
 
-  <include file="$(find rotors_gazebo)/launch/test_single_svo.launch">
+  <include file="$(find rotors_utils)/launch/single_svo.launch">
     <arg name="index" value="$(arg mav_index1)" />
     <arg name="follower_index" value="$(arg mav_index2)" />
-    <arg name="x" value="-1.2"/>
-    <arg name="y" value="-1.2"/>
+    <arg name="follower_index_2" value="$(arg mav_index3)" />
+    <arg name="x" value="0"/>
+    <arg name="y" value="0"/>
     <arg name="z" value="0.1"/>
     <arg name="feature_type" value="$(arg feature_type)"/>
     <arg name="is_leader" value="true" />
   </include>
 
-  <include file="$(find rotors_gazebo)/launch/test_single_svo.launch">
+  <!--<include file="$(find rotors_utils)/launch/single_svo.launch">
     <arg name="index" value="$(arg mav_index2)" />
     <arg name="follower_index" value="$(arg mav_index1)" />
-    <arg name="x" value="1.2"/>
-    <arg name="y" value="1.2"/>
+    <arg name="x" value="2"/>
+    <arg name="y" value="0"/>
+    <arg name="z" value="0.1"/>
+    <arg name="feature_type" value="$(arg feature_type)"/>
+    <arg name="is_leader" value="false" />
+  </include>-->
+
+  <include file="$(find rotors_utils)/launch/single_svo.launch">
+    <arg name="index" value="$(arg mav_index3)" />
+    <arg name="follower_index" value="$(arg mav_index1)" />
+    <arg name="x" value="-2"/>
+    <arg name="y" value="0"/>
     <arg name="z" value="0.1"/>
     <arg name="feature_type" value="$(arg feature_type)"/>
     <arg name="is_leader" value="false" />

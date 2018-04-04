@@ -96,6 +96,7 @@ class JoyPose {
   Axes axes_;
   Buttons buttons_;
   bool is_leader_;
+  bool is_follower_;
   bool fly_by_joy_;
 
   // mav_msgs::RollPitchYawrateThrust control_msg_;
@@ -105,6 +106,8 @@ class JoyPose {
 
   double take_off_height_;
   ros::Timer timer_;
+  int my_id_;
+  int follower_id_;
 
   std::string base_link_frame_;
   std::string world_frame_;

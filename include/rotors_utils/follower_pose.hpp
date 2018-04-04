@@ -18,28 +18,31 @@ struct Circle{
 	// 开始的位置
 	geometry_msgs::PoseStamped pose_base_;
 	geometry_msgs::PoseStamped pose_;
-	bool is_initialized_;
 
 	bool is_clockwise_;
 	// 半径的平方,米
 	float radius2_;
 	// 半径,米
 	float radius_;
-	// 初始角度
-	float theta0_;
-	// 角度
-	float theta_;
 
-	// 周期
-	float T_;
 	// 已经流逝的时间
 	float t_;
+	// 角度
+	float theta_;
+	// 初始角度
+	float theta0_;
+	bool is_initialized_;
+	// 周期
+	float T_;
 	Circle():is_initialized_(false){}
-	Circle(geometry_msgs::PoseStamped pose, float T=100):T_(T),t_(0),theta_(0),is_initialized_(true){
+	Circle(geometry_msgs::PoseStamped pose, float T=100, double px=0.0,double py=0.0)
+		:t_(0),theta_(0),is_initialized_(true),T_(T){
 		radius2_=pose.pose.position.x*pose.pose.position.x+pose.pose.position.y*pose.pose.position.y;
 		radius_=sqrt(radius2_);
 		theta0_=atan2(pose.pose.position.y,pose.pose.position.x);
 		pose_base_=pose;
+		pose_base_.pose.position.x=px;
+		pose_base_.pose.position.y=py;
 		pose_=pose;
 	}
 
@@ -54,12 +57,23 @@ struct Circle{
 		}
 		assert(t_>=0);
 		theta_=t_/T_*2*MY_PI;
-		pose_.pose.position.x=-cos(theta_+theta0_)*radius_;
-		pose_.pose.position.y=-sin(theta_+theta0_)*radius_;
+		pose_.pose.position.x=cos(theta_+theta0_)*radius_+pose_base_.pose.position.x;
+		pose_.pose.position.y=sin(theta_+theta0_)*radius_+pose_base_.pose.position.y;
+		// pose_.pose.position.x=cos(theta_)*radius_;
+		// pose_.pose.position.y=sin(theta_)*radius_;
 		pose_.pose.position.z=pose_base_.pose.position.z;
 		// 在需要发布的时候更新时间
 		pose_.header.stamp=ros::Time::now();
+		pose_.pose.orientation.x=0;
+		pose_.pose.orientation.y=0;
+		pose_.pose.orientation.z=0;
+		pose_.pose.orientation.w=1;
 		return pose_;
+	} 
+	
+	void reset_center(double px, double py){
+		pose_base_.pose.position.x=px;
+		pose_base_.pose.position.y=py;
 	}
 };
 
@@ -75,8 +89,11 @@ public:
 	virtual ~FollowerPose();
 
 private:
+	int my_id_;
+	int other_id_;
 	ros::NodeHandle nh_;
 	ros::Publisher command_pub_;
+	ros::Publisher trajectory_base_pub_;
 
 	ros::Subscriber relative_sub_;
 	bool is_leader_;

@@ -38,7 +38,8 @@ JoyPose::JoyPose():fly_by_joy_(true),yaw_(0) {
   pose_.pose.orientation.y  = 0;
   pose_.pose.orientation.z = 0;
   pose_.pose.orientation.w = 1;
-
+  pnh.param<int >("my_id",my_id_,0);
+  pnh.param<int >("follower_id",follower_id_,0);
   pnh.param<double >("take_off_height", take_off_height_, 2);
 
   pnh.param<int>("x_axis", axes_.x.axis, 5);
@@ -58,7 +59,6 @@ JoyPose::JoyPose():fly_by_joy_(true),yaw_(0) {
   // 起飞
   pnh.param<int>("take_off_button", buttons_.takeoff.button, 1);
   
-  pnh.param<bool>("is_leader",is_leader_,true);
 
   pnh.param<double>("slow_factor", slow_factor_, 0.2);
 
@@ -78,6 +78,9 @@ JoyPose::JoyPose():fly_by_joy_(true),yaw_(0) {
   pnh.param<std::string>("target_pose",target_pose_str_,"/hummingbird0/target_pose");
   target_pose_sub_ = nh_.subscribe(target_pose_str_,10,&JoyPose::TargetPoseCallback,this);
   joy_sub_ = nh_.subscribe("joy", 10, &JoyPose::JoyCallback, this);
+
+  is_leader_= (my_id_==0)? true: false;
+  is_follower_ = (follower_id_>0)? true:false;
 }
 
 void JoyPose::TargetPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg){
@@ -98,55 +101,58 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
     std_srvs::Trigger srv;
     pose_.pose.position.z= take_off_height_ ;
     if(taking_off_client_.call(srv)){
-      ROS_INFO("message: %s",srv.response.message.c_str());
+      ROS_INFO("takeoff message assumed index %d %d: %s",my_id_,follower_id_,srv.response.message.c_str());
     }else{
-      ROS_ERROR("Failed to call service takeoff");
+      ROS_ERROR("Failed to call service %d %d takeoff",my_id_,follower_id_);
     }    
   }else{
     pose_.pose.position.z += GetAxis(axes_.z) * dt;
   }
 
   // 接收图像
-  if (GetButton(buttons_.receive_image)){
-    std_srvs::Trigger receive_image_srv;
-    if(receive_image_client_.call(receive_image_srv)){
-      ROS_INFO("message: %s",receive_image_srv.response.message.c_str());
-    }else{
-      ROS_ERROR("Failed to call service receive_image");
+  if(is_leader_){
+    if (GetButton(buttons_.receive_image)){
+      std_srvs::Trigger receive_image_srv;
+      if(receive_image_client_.call(receive_image_srv)){
+        ROS_INFO("receive image message assumed index %d %d: %s",my_id_,follower_id_,receive_image_srv.response.message.c_str());
+      }else{
+        ROS_ERROR("Failed to call service %d %d receive_image",my_id_,follower_id_);
+      }
     }
   }
-
   // 从机飞行套路
-  if (GetButton(buttons_.go)){
-    ROS_INFO("wtf");
-    if(!is_leader_){
+  if(is_follower_){
+    if (GetButton(buttons_.go)){
+      ROS_INFO("wtf");
       rotors_comm::SuccessiveControl follower_pose_srv;
       follower_pose_srv.request.pose=pose_;
       if(follower_pose_client_.call(follower_pose_srv)){
-        ROS_INFO("message: %s",follower_pose_srv.response.message.c_str());
+        ROS_INFO("follower message %d %d: %s",my_id_,follower_id_,follower_pose_srv.response.message.c_str());
         if(fly_by_joy_switch)fly_by_joy_=false;
         fly_by_joy_switch=true;
       }else{
-        ROS_ERROR("Failed to call service takeoff");
+        ROS_ERROR("Failed to call service %d %d go",my_id_,follower_id_);
       }    
     }
   }
   pose_.header.stamp = now;
   pose_.header.frame_id = world_frame_;
+
+  tf2::Quaternion q;
+  q.setRPY(0.0, 0.0, yaw_);
+  pose_.pose.orientation = tf2::toMsg(q);
+  // 首先都被手柄控制
   if(fly_by_joy_){
     pose_.pose.position.x += (cos(yaw_) * GetAxis(axes_.x) - sin(yaw_) * GetAxis(axes_.y)) * dt;
     pose_.pose.position.y += (cos(yaw_) * GetAxis(axes_.y) + sin(yaw_) * GetAxis(axes_.x)) * dt;
     yaw_ += GetAxis(axes_.yaw) * M_PI/180.0 * dt /3;
-    tf2::Quaternion q;
-    q.setRPY(0.0, 0.0, yaw_);
-    pose_.pose.orientation = tf2::toMsg(q);
-  } else if(!is_leader_){
+  } else if(is_follower_){
     // 这边注释掉，follower就停掉了。
     pose_.pose.position.x=target_pose_.pose.position.x;
     pose_.pose.position.y=target_pose_.pose.position.y;
-    pose_.pose.position.z=take_off_height_;
-
-    ROS_INFO_STREAM("pose_:"<<std::endl<<pose_<<std::endl);
+    pose_.pose.position.z=take_off_height_; 
+    // ROS_INFO_STREAM(std::endl<<"  target x:"<<pose_.pose.position.x
+    // <<"  target y:"<< pose_.pose.position.y<<std::endl);
   }
   // 否则就不更新了
   // 从pose中获得x^L2_d,f

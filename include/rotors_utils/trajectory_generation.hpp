@@ -34,7 +34,7 @@ private:
   
   Sophus::SE3 T_LS_LW_;
   Sophus::SE3 T_FS_FW_;
-  Sophus::SE3 T_LW_FW_;
+  Sophus::SE3 T_LW_FW_; 
   Sophus::SE3 T_LS_L2_;
   Sophus::SE3 T_L2_F2_;
   Sophus::SE3 T_FS_F2_;
