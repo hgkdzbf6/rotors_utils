@@ -34,19 +34,83 @@
       <arg name="enable_logging" value="false" />
       <arg name="enable_ground_truth" value="true" />
       <arg name="log_file" value="hummingbird0"/>
-      <arg name="x" value="-1.2"/>
-      <arg name="y" value="-1.2"/>
+      <arg name="x" value="0"/>
+      <arg name="y" value="0"/>
       <arg name="z" value="0.0"/>
     </include>
 
     
+  <!--relative start!-->
+  <!--通过接收两副图像，来确定相对位置，接受的参数是：拓扑结构，自身节点的消息-->
+  <node name="orb_main01" pkg="sift"
+   type="orb" output="screen" if="true">
+    <!--载入拓扑结构数据-->
+    <param name="uav_index" value="0"/>
+    <param name="other_index" value="1"/>
+    <param name="receive_image" value="receive_image01" />
+  </node>
+
+  <!--产生在L2中看F2的目标轨迹, 但是这个是F2产生的，问问老板改不改吧-->
+  <node name="follower_pose01" pkg="rotors_utils" 
+    type="follower_pose" output="screen" if="true" >
+    <param name="my_id" value="0"/>
+    <param name="other_id" value="1"/>
+    <param name="relative_pose" value="relative_pose01" />
+    <param name="follower_pose" value="follower_pose01" />
+    <param name="is_leader" value="true" />
+  </node>
+
+  <!--follower节点的期望值计算节点-->
+  <node name="trajectory_generation01" 
+    pkg="rotors_utils" type="trajectory_generation" output="screen" if="true">
+    <param name="my_id" value="0"/>
+    <param name="follower_id" value="1"/>
+    <param name="T_L2_F2" value="/hummingbird0/relative_pose01"/>
+    <param name="T_LS_L2" value="/hummingbird0/svo/fusion_pose"/>
+    <param name="T_FS_F2" value="/hummingbird1/svo/fusion_pose"/>
+    <param name="T_L2_dF2" value="/hummingbird0/leader_desired_pose01"/>
+    <param name="T_FW_dF2" value="/hummingbird1/target_pose"/>
+  </node>
+
+  <!--relative start!-->
+  <!--通过接收两副图像，来确定相对位置，接受的参数是：拓扑结构，自身节点的消息-->
+  <node name="orb_main02" pkg="sift"
+   type="orb" output="screen" if="true">
+    <!--载入拓扑结构数据-->
+    <param name="uav_index" value="0"/>
+    <param name="other_index" value="2"/>
+    <param name="receive_image" value="receive_image02" />
+  </node>
+
+  <!--产生在L2中看F2的目标轨迹, 但是这个是F2产生的，问问老板改不改吧-->
+  <node name="follower_pose02" pkg="rotors_utils" 
+    type="follower_pose" output="screen" if="true" >
+    <param name="my_id" value="0"/>
+    <param name="other_id" value="2"/>
+    <param name="relative_pose" value="relative_pose02" />
+    <param name="follower_pose" value="follower_pose02" />
+    <param name="is_leader" value="true" />
+  </node>
+
+  <!--follower节点的期望值计算节点-->
+  <node name="trajectory_generation02" 
+    pkg="rotors_utils" type="trajectory_generation" output="screen" if="true">
+    <param name="my_id" value="0"/>
+    <param name="follower_id" value="2"/>
+    <param name="T_L2_F2" value="/hummingbird0/relative_pose02"/>
+    <param name="T_LS_L2" value="/hummingbird0/svo/fusion_pose"/>
+    <param name="T_FS_F2" value="/hummingbird2/svo/fusion_pose"/>
+    <param name="T_L2_dF2" value="/hummingbird0/leader_desired_pose02"/>
+    <param name="T_FW_dF2" value="/hummingbird2/target_pose"/>
+  </node>
+
 
     <!--控制器 -->
     <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen" >
       <rosparam command="load" file="$(find rotors_utils)/params/lee_controller_hummingbird.yaml" />
       <rosparam command="load" file="$(find rotors_utils)/params/hummingbird.yaml" />
-      <remap from="odometry" to="odometry_sensor1/odometry" if="true"/>
-      <remap from="odometry" to="odometry_pub_frame" unless="true"/>
+      <remap from="odometry" to="odometry_sensor1/odometry" if="false"/>
+      <remap from="odometry" to="odometry_pub_frame" unless="false"/>
       <param name="take_off_height" value="3-2" />
     </node>
 
@@ -59,10 +123,12 @@
     <!--算了不用了,改手柄的command_control吧-->
     <node name="joy_pose" pkg="rotors_utils" type="joy_pose"  output="screen" >
       <param name="my_id" value="0"/>
-      <param name="leader_id" value="1"/>
+      <param name="leader_id" value="0"/>
       <param name="is_follower" value="false"/>
       <param name="take_off_height" value="3" />
-      <param name="target_pose" value="/hummingbird1/target_pose"/>
+      <param name="follower_pose" value="/hummingbird0/follower_pose00" />
+      <param name="target_pose" value="/hummingbird0/target_pose"/>
+      <param name="receive_image" value="/hummingbird0/receive_image00"  />
     </node>
     
     <!--手柄的具体动作-->
@@ -87,8 +153,8 @@
       <remap from="magnetic" to="mag" />
     </node>
 
-    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
-    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+    <!--<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />-->
+    <!--<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />-->
   </group>
 
   <!-- The following line causes gzmsg and gzerr messages to be printed to the console
@@ -106,8 +172,8 @@
       <arg name="enable_logging" value="false" />
       <arg name="enable_ground_truth" value="true" />
       <arg name="log_file" value="hummingbird1"/>
-      <arg name="x" value="0.0"/>
-      <arg name="y" value="0.0"/>
+      <arg name="x" value="1.2"/>
+      <arg name="y" value="1.2"/>
       <arg name="z" value="0.0"/>
     </include>
 
@@ -117,8 +183,8 @@
     <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen" >
       <rosparam command="load" file="$(find rotors_utils)/params/lee_controller_hummingbird.yaml" />
       <rosparam command="load" file="$(find rotors_utils)/params/hummingbird.yaml" />
-      <remap from="odometry" to="odometry_sensor1/odometry" if="true"/>
-      <remap from="odometry" to="odometry_pub_frame" unless="true"/>
+      <remap from="odometry" to="odometry_sensor1/odometry" if="false"/>
+      <remap from="odometry" to="odometry_pub_frame" unless="false"/>
       <param name="take_off_height" value="3-2" />
     </node>
 
@@ -131,10 +197,12 @@
     <!--算了不用了,改手柄的command_control吧-->
     <node name="joy_pose" pkg="rotors_utils" type="joy_pose"  output="screen" >
       <param name="my_id" value="1"/>
-      <param name="leader_id" value="1"/>
+      <param name="leader_id" value="0"/>
       <param name="is_follower" value="true"/>
       <param name="take_off_height" value="3" />
+      <param name="follower_pose" value="/hummingbird0/follower_pose01" />
       <param name="target_pose" value="/hummingbird1/target_pose"/>
+      <param name="receive_image" value="/hummingbird0/receive_image01"  />
     </node>
     
     <!--手柄的具体动作-->
@@ -159,8 +227,8 @@
       <remap from="magnetic" to="mag" />
     </node>
 
-    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
-    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+    <!--<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />-->
+    <!--<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />-->
   </group>
 
   <!-- The following line causes gzmsg and gzerr messages to be printed to the console
@@ -178,16 +246,19 @@
       <arg name="enable_logging" value="false" />
       <arg name="enable_ground_truth" value="true" />
       <arg name="log_file" value="hummingbird2"/>
-      <arg name="x" value="1.2"/>
-      <arg name="y" value="1.2"/>
+      <arg name="x" value="-1.2"/>
+      <arg name="y" value="-1.2"/>
       <arg name="z" value="0.0"/>
     </include>
+
+    
+
     <!--控制器 -->
     <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen" >
       <rosparam command="load" file="$(find rotors_utils)/params/lee_controller_hummingbird.yaml" />
       <rosparam command="load" file="$(find rotors_utils)/params/hummingbird.yaml" />
-      <remap from="odometry" to="odometry_sensor1/odometry" if="true"/>
-      <remap from="odometry" to="odometry_pub_frame" unless="true"/>
+      <remap from="odometry" to="odometry_sensor1/odometry" if="false"/>
+      <remap from="odometry" to="odometry_pub_frame" unless="false"/>
       <param name="take_off_height" value="3-2" />
     </node>
 
@@ -200,10 +271,12 @@
     <!--算了不用了,改手柄的command_control吧-->
     <node name="joy_pose" pkg="rotors_utils" type="joy_pose"  output="screen" >
       <param name="my_id" value="2"/>
-      <param name="leader_id" value="1"/>
+      <param name="leader_id" value="0"/>
       <param name="is_follower" value="true"/>
       <param name="take_off_height" value="3" />
-      <param name="target_pose" value="/hummingbird1/target_pose"/>
+      <param name="follower_pose" value="/hummingbird0/follower_pose02" />
+      <param name="target_pose" value="/hummingbird2/target_pose"/>
+      <param name="receive_image" value="/hummingbird0/receive_image02"  />
     </node>
     
     <!--手柄的具体动作-->
@@ -228,8 +301,8 @@
       <remap from="magnetic" to="mag" />
     </node>
 
-    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
-    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+    <!--<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />-->
+    <!--<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />-->
   </group>
 
 </launch>

@@ -22,14 +22,14 @@ class Topology(object):
     '''
         Topology parse
     '''
-    def __init__(self, topology_str):
+    def __init__(self, topology_str, pose=[]):
         self.topology_str_ = topology_str
         self.topology_arr_ = []
         self.topology_ = []
         self.topology_size_ = 0
         self.topology_set_ = []
         self.single_str_ = ''
-
+        self.pose=pose
         self.main_dict={'single_templates':'', 'mav_name':'hummingbird'}
         #     def generate_single(self, relative_templates, base_x=0.0, base_y=0.0, base_z=0.0,
         #  index=0, other_index=1,
@@ -37,7 +37,7 @@ class Topology(object):
         #  control_use_true_value=True, feature_type='orb'):
         self.single_dict={'relative_templates' : '', 'base_x' : 0, 'base_y' : 0, 'base_z' : 0, 
         'index' : 0, 'leader_index' : 0, 'is_leader' : True, 'mav_name' : 'hummingbird', 
-        'model_name' : 'hummingbird', 'take_off_height' : 3.0, 'control_use_true_value' : True,
+        'model_name' : 'hummingbird', 'take_off_height' : 3.0, 'control_use_true_value' : False,
         'feature_type' : 'orb' 
         }        
 
@@ -45,9 +45,6 @@ class Topology(object):
         self.relative_dict={ 'index' : 0, 'other_index' : 0, 'is_leader' : True, 
         'mav_name' : 'hummingbird', 'feature_type' : 'orb' 
         }
-        # base_x, base_y, is_leader, base_z, feature_type
-        self.configure_base=[[-1.2,-1.2],[0,0],[1.2,1.2]]
-        self.configure=[[-1.2,-1.2],[0,0],[1.2,1.2]]
         self.main_template_ = '''
 <launch>
   <arg name="world_name" default="map3_world"/>
@@ -116,7 +113,9 @@ class Topology(object):
       <param name="leader_id" value="%{leader_index}"/>
       <param name="is_follower" value="%{is_follower}"/>
       <param name="take_off_height" value="%{take_off_height}" />
-      <param name="target_pose" value="/%{mav_name}%{leader_index}/target_pose"/>
+      <param name="follower_pose" value="/%{mav_name}%{leader_index}/follower_pose%{leader_index}%{index}" />
+      <param name="target_pose" value="/%{mav_name}%{index}/target_pose"/>
+      <param name="receive_image" value="/%{mav_name}%{leader_index}/receive_image%{leader_index}%{index}"  />
     </node>
     
     <!--手柄的具体动作-->
@@ -141,18 +140,20 @@ class Topology(object):
       <remap from="magnetic" to="mag" />
     </node>
 
-    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
-    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+    <!--<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />-->
+    <!--<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />-->
   </group>
 '''
         # 参数： feature_type, index, other_index, is_leader, mav_name, 
         self.relative_template_ = '''
+  <!--relative start!-->
   <!--通过接收两副图像，来确定相对位置，接受的参数是：拓扑结构，自身节点的消息-->
   <node name="%{feature_type}_main%{index}%{other_index}" pkg="sift"
    type="%{feature_type}" output="screen" if="%{is_leader}">
     <!--载入拓扑结构数据-->
     <param name="uav_index" value="%{index}"/>
     <param name="other_index" value="%{other_index}"/>
+    <param name="receive_image" value="receive_image%{index}%{other_index}" />
   </node>
 
   <!--产生在L2中看F2的目标轨迹, 但是这个是F2产生的，问问老板改不改吧-->
@@ -161,6 +162,7 @@ class Topology(object):
     <param name="my_id" value="%{index}"/>
     <param name="other_id" value="%{other_index}"/>
     <param name="relative_pose" value="relative_pose%{index}%{other_index}" />
+    <param name="follower_pose" value="follower_pose%{index}%{other_index}" />
     <param name="is_leader" value="%{is_leader}" />
   </node>
 
@@ -176,32 +178,18 @@ class Topology(object):
     <param name="T_FW_dF2" value="/%{mav_name}%{other_index}/target_pose"/>
   </node>
 '''
-
-    def get_topology(self):
-        '''
-        hello
-        '''
-        pass
-    
-    def generate(self, topology_str):
-        '''
-        生成主要的文件
-        第一步： 解析拓扑结构
-        第二步： 生成字符串
-        第三步： 输出到文件
-        '''
-        self.parse()
         
     # relative_templates, base_x, base_y, base_z, index, other_index,
     #  mav_name, model_name, take_off_height, control_use_true_value, is_leader
     def generate_single(self, relative_templates, base_x=0.0, base_y=0.0, base_z=0.0, index=0, leader_index=1,
          is_follower=True, mav_name='hummingbird', model_name='hummingbird', take_off_height=3,
-         control_use_true_value=True, feature_type='orb'):
+         control_use_true_value=False, feature_type='orb', target_pose_index=0):
         '''
         生成单个飞机的launch段,
         完成这个之前需要先完成relative
         '''
         single_dict = copy.deepcopy(self.single_dict)
+        single_dict['relative_templates']=relative_templates
         single_dict['base_x']=base_x
         single_dict['base_y']=base_y
         single_dict['base_z']=base_z
@@ -213,6 +201,7 @@ class Topology(object):
         single_dict['take_off_height']=take_off_height
         single_dict['control_use_true_value']=control_use_true_value
         single_dict['feature_type']=feature_type
+        single_dict['target_pose_index']=target_pose_index
         return MyTemplate(self.single_template_).substitute(single_dict)    
 
     def generate_relative(self, index, other_index, is_leader, mav_name='hummingbird', feature_type='orb'):
@@ -229,28 +218,8 @@ class Topology(object):
 
     def generate_main(self):
         main_dict = copy.deepcopy(self.main_dict) 
-        main_dict['single_templates']=self.single_str_
+        main_dict['single_templates'] = self.single_str_
         return MyTemplate(self.main_template_).substitute(main_dict)
-
-    def get_leaders(self, index):
-        '''
-        获得他的leader的序号
-        '''
-        leaders=[]
-        for i in range(0, self.topology_size_):
-            if self.topology_[index * self.topology_size_ + i] == 1:
-                leaders.append(i)
-        return leaders
-
-    def get_followers(self, index):
-        '''
-        获得他的follower的序号
-        '''
-        followers=[]
-        for i in range(0,self.topology_size_):
-            if self.topology_[index + self.topology_size_ * i] == 1:
-                followers.append(i)
-        return followers
 
     def write_file(self):
         '''
@@ -282,41 +251,26 @@ class Topology(object):
         self.relative_strs_ = [''] * self.topology_size_
         self.single_strs_ = [''] * self.topology_size_
 
-    def config_single(self):
-        pass
-
     def test_leader(self, index):
+        '''
+        检验是不是leader,如果是的话,返回follower的序号
+        如果不是,返回0
+        '''
         for i in self.topology_set_:
             if i[0] == index:
-                return True
-        return False
+                return i[1]
+        return 0
     
     def test_follower(self, index):
+        '''
+        检验是不是follower,如果是的话,返回leader的序号
+        如果不是,返回-1
+        '''
         for i in self.topology_set_:
             if i[1] == index:
-                return True
-        return False
+                return i[0]
+        return 0
     
-    def config_relative(self):
-        pass
-
-    def config_many(self):
-        '''
-        设置参数
-        输入为topology block，然后设置参数吧
-        '''
-        # self.configure = copy.deepcopy(self.configure_base)
-        # for i in range(0, len(self.topology_block_)):
-        #     # leader 鉴定
-        #     # 如果存在follower，则是leader
-        #     if len(self.topology_block_[i][1]) > 0:
-        #         self.configure[i].append(True)
-        #     else:
-        #         self.configure[i].append(False)
-            
-        #     # 如果存在leader，则是follower
-        #     if len(self.topology_block_[i][1]) > 0:
-        #         pass
 
     def config(self):
         for i in range(0,len(self.topology_set_)):
@@ -333,19 +287,19 @@ class Topology(object):
             # relative_templates, base_x, base_y, base_z, index, leader_index, is_follower, 
             #  mav_name, model_name, take_off_height, control_use_true_value, is_leader
             index = i
-            is_follower = self.test_follower(index)
-            leader_index = 0
+            leader_index = self.test_follower(index)
+            is_follower = (leader_index != index)
             self.single_strs_[i] = self.generate_single(relative_templates=self.relative_strs_[i],
-            base_x=(i-1)*1.2, base_y=(i-1)*1.2, is_follower=is_follower, index=index ).replace('True','true').replace('False','false')
+                        base_x=self.pose[i][0], 
+                        # base_y=(i-1)*1.2, 
+                        base_y=self.pose[i][1], 
+                        is_follower=is_follower, index=index,
+                        leader_index=leader_index, 
+                        ).replace('True','true').replace('False','false')
             self.single_str_ += self.single_strs_[i]
 
         # 最后替换掉main launch文件里的singles_templates
         self.str_ = self.generate_main()
-
-        print(self.str_)
-        self.config_many()
-        self.config_single()
-        self.config_relative()
         
     def run(self):
         '''
@@ -356,14 +310,21 @@ class Topology(object):
         self.parse()
         self.config()
         self.write_file()
+    
+    def run_without_write(self):
+        self.parse()
+        self.config()
+
 
 def main():
     '''
     main
     '''
-    top_ = Topology('0 0 0 1 0 0 1 0 0')
+    top_ = Topology('0 0 0 1 0 0 1 0 0',[[0,0],[1.2,1.2],[-1.2,-1.2]])
+    # top_ = Topology('0 0 1 0',[[0,0],[1.2,1.2]])
+    # top_ = Topology('0',[[0,0]])
     top_.run()
-    print(top_.topology_set_)
+    # print(top_.relative_strs_)
     # print(top_.generate_single(2, 0, False))
 
 if __name__ == '__main__':

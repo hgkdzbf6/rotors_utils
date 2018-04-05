@@ -92,6 +92,8 @@ class JoyPose {
   ros::ServiceClient follower_pose_client_;
   
   std::string namespace_;
+  std::string receive_image_str_;
+  std::string follower_pose_str_;
   double slow_factor_;
   Axes axes_;
   Buttons buttons_;

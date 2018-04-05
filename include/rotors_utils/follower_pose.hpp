@@ -107,6 +107,7 @@ private:
 	geometry_msgs::PoseStamped pose_;
 	geometry_msgs::PoseStamped pose_base_;
 	std::string relative_str_;
+	std::string follower_pose_str_;
 	ros::Timer timer_;
 
 	void TimerCallback(const ros::TimerEvent& e);

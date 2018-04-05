@@ -46,7 +46,9 @@ void TrajectoryGeneration::T_L2_F2Callback(const geometry_msgs::PoseStampedConst
   if(!T_L_switch){
     geoPoseStamped2SE3(*msg,T_LW_FW_);
     SE32Sim3(T_LW_FW_,1,S_LW_FW_);
-    ROS_INFO_STREAM("first message come: "<<T_LW_FW_<<std::endl);
+    ROS_INFO_STREAM("first follower_id: "<< follower_id_ <<" message come: "<<T_LW_FW_<<std::endl);
+    ROS_INFO_STREAM("first follower_id: "<< follower_id_ <<" inverse message come: "
+      <<T_LW_FW_.inverse()<<std::endl);
   }
   T_L_switch=true;
   // 其他时候获取L2_F2
@@ -79,8 +81,8 @@ void TrajectoryGeneration::TimerCallback(const ros::TimerEvent & e){
   // S_F_dF_ = S_L_F_ * S_L2_L_ * S_L2_dF_.inverse();  
   // S_LW_FW_ = S_LS_LW_.inverse() * S_LS_L2_ * S_L2_F2_ * S_FS_F2_.inverse() * S_FS_FW_;
   // S_FW_dF2_ = S_LW_FW_.inverse() * S_LS_LW_.inverse() * S_LS_L2_ * S_L2_dF2_;
-  S_FW_dF2_ = S_LW_FW_.inverse() * S_LS_LW_.inverse() * S_FS_F2_ * S_L2_dF2_;
-  // S_FW_dF2_ = S_LW_FW_.inverse() * S_L2_dF2_;
+  // S_FW_dF2_ = S_LW_FW_.inverse() * S_LS_LW_.inverse() * S_FS_F2_ * S_L2_dF2_;
+  S_FW_dF2_ = S_LW_FW_ * S_L2_dF2_.inverse();
   // S_L_F_ = T_L_F 
   // S_F_dF_ = S_L_F_.inverse() * S_L2_dF_;
   T_FW_dF2_=S_FW_dF2_.to_SE3();
@@ -91,11 +93,11 @@ void TrajectoryGeneration::TimerCallback(const ros::TimerEvent & e){
   // ROS_INFO_STREAM("S_FS_F2_:"<<std::endl<<S_FS_F2_<<std::endl);
   // ROS_INFO_STREAM("S_L2_dF2_:"<<std::endl<<S_L2_dF2_<<std::endl);
 
-  ROS_INFO_STREAM("S_LW_FW_.inverse():"<<std::endl<<S_LW_FW_.inverse()<<std::endl);
+  // ROS_INFO_STREAM("S_LW_FW_.inverse():"<<std::endl<<S_LW_FW_.inverse()<<std::endl);
   // ROS_INFO_STREAM("S_LS_LW_.inverse():"<<std::endl<<S_LS_LW_.inverse()<<std::endl);
-  ROS_INFO_STREAM("S_LS_L2_:"<<std::endl<<S_LS_L2_<<std::endl);
-  ROS_INFO_STREAM("S_L2_dF2_:"<<std::endl<<S_L2_dF2_<<std::endl);
-  ROS_INFO_STREAM("S_FW_dF2_:"<<std::endl<<S_FW_dF2_<<std::endl);
+  // ROS_INFO_STREAM("S_LS_L2_:"<<std::endl<<S_LS_L2_<<std::endl);
+  // ROS_INFO_STREAM("S_L2_dF2_:"<<std::endl<<S_L2_dF2_<<std::endl);
+  // ROS_INFO_STREAM("S_FW_dF2_:"<<std::endl<<S_FW_dF2_<<std::endl);
   follower_pub_.publish(pose_);
 }
 

@@ -7,7 +7,9 @@ FollowerPose::FollowerPose():receive_first_msg_(false),follower_pose_start_(fals
   pnh.param<bool>("is_leader",is_leader_,false);
   pnh.param<int>("my_id",my_id_,0);
   pnh.param<int>("other_id",other_id_,1);
-  server_= nh_.advertiseService("follower_pose", &FollowerPose::callback,this);  
+
+  pnh.param<std::string>("follower_pose", follower_pose_str_, "follower_pose");
+  server_= nh_.advertiseService(follower_pose_str_, &FollowerPose::callback,this);  
  
   relative_sub_=nh_.subscribe(relative_str_,5,&FollowerPose::relativeCallback,this);
   timer_=nh_.createTimer(ros::Duration(0.1),&FollowerPose::TimerCallback,this);

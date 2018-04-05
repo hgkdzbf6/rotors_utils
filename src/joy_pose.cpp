@@ -73,11 +73,16 @@ JoyPose::JoyPose():fly_by_joy_(true),yaw_(0) {
   nh_.param<std::string>("base_stabilized_frame", base_stabilized_frame_, "base_stabilized");
 
   taking_off_client_ = nh_.serviceClient<std_srvs::Trigger>("taking_off");
-  receive_image_client_ = nh_.serviceClient<std_srvs::Trigger>("receive_image");
-  follower_pose_client_=nh_.serviceClient<rotors_comm::SuccessiveControl>("follower_pose");
+  
+  pnh.param<std::string>("receive_image", receive_image_str_, "receive_image01");
+  receive_image_client_ = nh_.serviceClient<std_srvs::Trigger>(receive_image_str_);
+
+  pnh.param<std::string>("follower_pose", follower_pose_str_, "follower_pose");
+  follower_pose_client_=nh_.serviceClient<rotors_comm::SuccessiveControl>(follower_pose_str_);
 
   pnh.param<std::string>("target_pose",target_pose_str_,"/hummingbird0/target_pose");
   target_pose_sub_ = nh_.subscribe(target_pose_str_,10,&JoyPose::TargetPoseCallback,this);
+  
   joy_sub_ = nh_.subscribe("joy", 10, &JoyPose::JoyCallback, this);
   // 为啥能用这种方法判断呢?
   // 因为根节点的id和leader id才一样
@@ -113,13 +118,14 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
   }
 
   // 接收图像
-  if(is_leader_){
+  // 这里数量要对等
+  if(is_follower_){
     if (GetButton(buttons_.receive_image)){
       std_srvs::Trigger receive_image_srv;
       if(receive_image_client_.call(receive_image_srv)){
         ROS_INFO("receive image message assumed index %d: %s",my_id_,receive_image_srv.response.message.c_str());
       }else{
-        ROS_ERROR("Failed to call service %d receive_image",my_id_);
+        ROS_ERROR("Failed to call service %d receive_image, %s",my_id_, receive_image_str_.c_str());
       }
     }
   }
