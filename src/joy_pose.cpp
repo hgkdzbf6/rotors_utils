@@ -39,7 +39,8 @@ JoyPose::JoyPose():fly_by_joy_(true),yaw_(0) {
   pose_.pose.orientation.z = 0;
   pose_.pose.orientation.w = 1;
   pnh.param<int >("my_id",my_id_,0);
-  pnh.param<int >("follower_id",follower_id_,0);
+  pnh.param<int >("leader_id",leader_id_,0);
+  pnh.param<bool >("is_follower",is_follower_,0);
   pnh.param<double >("take_off_height", take_off_height_, 2);
 
   pnh.param<int>("x_axis", axes_.x.axis, 5);
@@ -78,9 +79,11 @@ JoyPose::JoyPose():fly_by_joy_(true),yaw_(0) {
   pnh.param<std::string>("target_pose",target_pose_str_,"/hummingbird0/target_pose");
   target_pose_sub_ = nh_.subscribe(target_pose_str_,10,&JoyPose::TargetPoseCallback,this);
   joy_sub_ = nh_.subscribe("joy", 10, &JoyPose::JoyCallback, this);
-
-  is_leader_= (my_id_==0)? true: false;
-  is_follower_ = (follower_id_>0)? true:false;
+  // 为啥能用这种方法判断呢?
+  // 因为根节点的id和leader id才一样
+  // 其他的,就算是leader节点,但是都是隶属于他们之上的leader节点的
+  // 其实还是和协议设计有关系
+  is_leader_= (my_id_ == leader_id_)? true: false;
 }
 
 void JoyPose::TargetPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg){
@@ -101,9 +104,9 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
     std_srvs::Trigger srv;
     pose_.pose.position.z= take_off_height_ ;
     if(taking_off_client_.call(srv)){
-      ROS_INFO("takeoff message assumed index %d %d: %s",my_id_,follower_id_,srv.response.message.c_str());
+      ROS_INFO("takeoff message assumed index %d: %s",my_id_,srv.response.message.c_str());
     }else{
-      ROS_ERROR("Failed to call service %d %d takeoff",my_id_,follower_id_);
+      ROS_ERROR("Failed to call service %d takeoff",my_id_);
     }    
   }else{
     pose_.pose.position.z += GetAxis(axes_.z) * dt;
@@ -114,9 +117,9 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
     if (GetButton(buttons_.receive_image)){
       std_srvs::Trigger receive_image_srv;
       if(receive_image_client_.call(receive_image_srv)){
-        ROS_INFO("receive image message assumed index %d %d: %s",my_id_,follower_id_,receive_image_srv.response.message.c_str());
+        ROS_INFO("receive image message assumed index %d: %s",my_id_,receive_image_srv.response.message.c_str());
       }else{
-        ROS_ERROR("Failed to call service %d %d receive_image",my_id_,follower_id_);
+        ROS_ERROR("Failed to call service %d receive_image",my_id_);
       }
     }
   }
@@ -127,11 +130,11 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
       rotors_comm::SuccessiveControl follower_pose_srv;
       follower_pose_srv.request.pose=pose_;
       if(follower_pose_client_.call(follower_pose_srv)){
-        ROS_INFO("follower message %d %d: %s",my_id_,follower_id_,follower_pose_srv.response.message.c_str());
+        ROS_INFO("follower message %d : %s",my_id_,follower_pose_srv.response.message.c_str());
         if(fly_by_joy_switch)fly_by_joy_=false;
         fly_by_joy_switch=true;
       }else{
-        ROS_ERROR("Failed to call service %d %d go",my_id_,follower_id_);
+        ROS_ERROR("Failed to call service %d go",my_id_);
       }    
     }
   }

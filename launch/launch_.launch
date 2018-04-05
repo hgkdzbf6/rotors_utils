@@ -1,0 +1,235 @@
+
+<launch>
+  <arg name="world_name" default="map3_world"/>
+  <!-- <arg name="log_file" default="hummingbird" />-->
+  <arg name="feature_type" default="orb" />
+  <arg name="control_use_true_value" default="true"/>
+  <!-- The following line causes gzmsg and gzerr messages to be printed to the console
+      (even when Gazebo is started through roslaunch) -->
+
+  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models"/>
+  <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find rotors_gazebo)/worlds/$(arg world_name).world" />
+    <arg name="debug" value="false" />
+    <arg name="paused" value="false" />
+    <arg name="gui" value="true" />
+    <arg name="verbose" value="false"/>
+  </include>
+
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rotors_gazebo)/rviz/sim_two_svo.rviz"/>
+  
+  <!-- The following line causes gzmsg and gzerr messages to be printed to the console
+      (even when Gazebo is started through roslaunch) -->
+
+  <group ns="hummingbird0">
+    <!--svo 节点-->
+    <include file="$(find svo_ros)/launch/test_uav.launch">
+      <arg name="cam_topic" value="camera_nadir/image_raw" />
+    </include>
+    <!--生成飞机模型-->
+    <include file="$(find rotors_gazebo)/launch/spawn_mav.launch">
+      <arg name="mav_name" value="hummingbird0" />
+      <arg name="model" value="$(find rotors_description)/urdf/mav_generic_odometry_sensor.gazebo" />
+      <arg name="enable_logging" value="false" />
+      <arg name="enable_ground_truth" value="true" />
+      <arg name="log_file" value="hummingbird0"/>
+      <arg name="x" value="-1.2"/>
+      <arg name="y" value="-1.2"/>
+      <arg name="z" value="0.0"/>
+    </include>
+
+    
+
+    <!--控制器 -->
+    <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen" >
+      <rosparam command="load" file="$(find rotors_utils)/params/lee_controller_hummingbird.yaml" />
+      <rosparam command="load" file="$(find rotors_utils)/params/hummingbird.yaml" />
+      <remap from="odometry" to="odometry_sensor1/odometry" if="true"/>
+      <remap from="odometry" to="odometry_pub_frame" unless="true"/>
+      <param name="take_off_height" value="3-2" />
+    </node>
+
+    <!--和手柄通信的节点-->
+    <node name="joy_node" pkg="joy" type="joy_node" output="screen">
+      <param name="dev" value="/dev/input/js0" />
+    </node>
+    <!--从hover_control修改过来,变得能够使用手柄控制-->
+    <!--或许这边应该换个控制器?-->
+    <!--算了不用了,改手柄的command_control吧-->
+    <node name="joy_pose" pkg="rotors_utils" type="joy_pose"  output="screen" >
+      <param name="my_id" value="0"/>
+      <param name="leader_id" value="1"/>
+      <param name="is_follower" value="false"/>
+      <param name="take_off_height" value="3" />
+      <param name="target_pose" value="/hummingbird1/target_pose"/>
+    </node>
+    
+    <!--手柄的具体动作-->
+    <node name="joy_control" pkg="rotors_gazebo" type="joy_control" output="screen" >
+    </node>
+
+    <!--功能是各种信息数据类型的转化-->
+    <node name="transformation" pkg="rotors_utils" type="transformation" output="screen" >
+      <param name="mag_sub_frame" value="magnetometer" />
+      <param name="mag_pub_frame" value="mag" />
+      <param name="image_sub_frame" value="camera_nadir/image_pos_vel" />
+    </node>
+
+     <node pkg="rotors_position_estimator" type="pose_estimation" name="position_estimation" output="screen" >
+      <rosparam file="$(find rotors_position_estimator)/params/simulation.yaml" />
+      <param name="nav_frame" value="/nav" />
+      <param name="publish_world_nav_transform" value="true" />
+      <remap from="raw_imu" to="imu" />
+      <remap from="svo_image" to="svo/fusion_pose" />
+      <param name="tf_prefix" value=""/>
+      <remap from="image_pos_vel" to="image_pub_frame" />
+      <remap from="magnetic" to="mag" />
+    </node>
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+  </group>
+
+  <!-- The following line causes gzmsg and gzerr messages to be printed to the console
+      (even when Gazebo is started through roslaunch) -->
+
+  <group ns="hummingbird1">
+    <!--svo 节点-->
+    <include file="$(find svo_ros)/launch/test_uav.launch">
+      <arg name="cam_topic" value="camera_nadir/image_raw" />
+    </include>
+    <!--生成飞机模型-->
+    <include file="$(find rotors_gazebo)/launch/spawn_mav.launch">
+      <arg name="mav_name" value="hummingbird1" />
+      <arg name="model" value="$(find rotors_description)/urdf/mav_generic_odometry_sensor.gazebo" />
+      <arg name="enable_logging" value="false" />
+      <arg name="enable_ground_truth" value="true" />
+      <arg name="log_file" value="hummingbird1"/>
+      <arg name="x" value="0.0"/>
+      <arg name="y" value="0.0"/>
+      <arg name="z" value="0.0"/>
+    </include>
+
+    
+
+    <!--控制器 -->
+    <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen" >
+      <rosparam command="load" file="$(find rotors_utils)/params/lee_controller_hummingbird.yaml" />
+      <rosparam command="load" file="$(find rotors_utils)/params/hummingbird.yaml" />
+      <remap from="odometry" to="odometry_sensor1/odometry" if="true"/>
+      <remap from="odometry" to="odometry_pub_frame" unless="true"/>
+      <param name="take_off_height" value="3-2" />
+    </node>
+
+    <!--和手柄通信的节点-->
+    <node name="joy_node" pkg="joy" type="joy_node" output="screen">
+      <param name="dev" value="/dev/input/js0" />
+    </node>
+    <!--从hover_control修改过来,变得能够使用手柄控制-->
+    <!--或许这边应该换个控制器?-->
+    <!--算了不用了,改手柄的command_control吧-->
+    <node name="joy_pose" pkg="rotors_utils" type="joy_pose"  output="screen" >
+      <param name="my_id" value="1"/>
+      <param name="leader_id" value="1"/>
+      <param name="is_follower" value="true"/>
+      <param name="take_off_height" value="3" />
+      <param name="target_pose" value="/hummingbird1/target_pose"/>
+    </node>
+    
+    <!--手柄的具体动作-->
+    <node name="joy_control" pkg="rotors_gazebo" type="joy_control" output="screen" >
+    </node>
+
+    <!--功能是各种信息数据类型的转化-->
+    <node name="transformation" pkg="rotors_utils" type="transformation" output="screen" >
+      <param name="mag_sub_frame" value="magnetometer" />
+      <param name="mag_pub_frame" value="mag" />
+      <param name="image_sub_frame" value="camera_nadir/image_pos_vel" />
+    </node>
+
+     <node pkg="rotors_position_estimator" type="pose_estimation" name="position_estimation" output="screen" >
+      <rosparam file="$(find rotors_position_estimator)/params/simulation.yaml" />
+      <param name="nav_frame" value="/nav" />
+      <param name="publish_world_nav_transform" value="true" />
+      <remap from="raw_imu" to="imu" />
+      <remap from="svo_image" to="svo/fusion_pose" />
+      <param name="tf_prefix" value=""/>
+      <remap from="image_pos_vel" to="image_pub_frame" />
+      <remap from="magnetic" to="mag" />
+    </node>
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+  </group>
+
+  <!-- The following line causes gzmsg and gzerr messages to be printed to the console
+      (even when Gazebo is started through roslaunch) -->
+
+  <group ns="hummingbird2">
+    <!--svo 节点-->
+    <include file="$(find svo_ros)/launch/test_uav.launch">
+      <arg name="cam_topic" value="camera_nadir/image_raw" />
+    </include>
+    <!--生成飞机模型-->
+    <include file="$(find rotors_gazebo)/launch/spawn_mav.launch">
+      <arg name="mav_name" value="hummingbird2" />
+      <arg name="model" value="$(find rotors_description)/urdf/mav_generic_odometry_sensor.gazebo" />
+      <arg name="enable_logging" value="false" />
+      <arg name="enable_ground_truth" value="true" />
+      <arg name="log_file" value="hummingbird2"/>
+      <arg name="x" value="1.2"/>
+      <arg name="y" value="1.2"/>
+      <arg name="z" value="0.0"/>
+    </include>
+    <!--控制器 -->
+    <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen" >
+      <rosparam command="load" file="$(find rotors_utils)/params/lee_controller_hummingbird.yaml" />
+      <rosparam command="load" file="$(find rotors_utils)/params/hummingbird.yaml" />
+      <remap from="odometry" to="odometry_sensor1/odometry" if="true"/>
+      <remap from="odometry" to="odometry_pub_frame" unless="true"/>
+      <param name="take_off_height" value="3-2" />
+    </node>
+
+    <!--和手柄通信的节点-->
+    <node name="joy_node" pkg="joy" type="joy_node" output="screen">
+      <param name="dev" value="/dev/input/js0" />
+    </node>
+    <!--从hover_control修改过来,变得能够使用手柄控制-->
+    <!--或许这边应该换个控制器?-->
+    <!--算了不用了,改手柄的command_control吧-->
+    <node name="joy_pose" pkg="rotors_utils" type="joy_pose"  output="screen" >
+      <param name="my_id" value="2"/>
+      <param name="leader_id" value="1"/>
+      <param name="is_follower" value="true"/>
+      <param name="take_off_height" value="3" />
+      <param name="target_pose" value="/hummingbird1/target_pose"/>
+    </node>
+    
+    <!--手柄的具体动作-->
+    <node name="joy_control" pkg="rotors_gazebo" type="joy_control" output="screen" >
+    </node>
+
+    <!--功能是各种信息数据类型的转化-->
+    <node name="transformation" pkg="rotors_utils" type="transformation" output="screen" >
+      <param name="mag_sub_frame" value="magnetometer" />
+      <param name="mag_pub_frame" value="mag" />
+      <param name="image_sub_frame" value="camera_nadir/image_pos_vel" />
+    </node>
+
+     <node pkg="rotors_position_estimator" type="pose_estimation" name="position_estimation" output="screen" >
+      <rosparam file="$(find rotors_position_estimator)/params/simulation.yaml" />
+      <param name="nav_frame" value="/nav" />
+      <param name="publish_world_nav_transform" value="true" />
+      <remap from="raw_imu" to="imu" />
+      <remap from="svo_image" to="svo/fusion_pose" />
+      <param name="tf_prefix" value=""/>
+      <remap from="image_pos_vel" to="image_pub_frame" />
+      <remap from="magnetic" to="mag" />
+    </node>
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+  </group>
+
+</launch>

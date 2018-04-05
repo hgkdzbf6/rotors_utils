@@ -1,14 +1,16 @@
-# -*- coding:utf8 -*-
+# -*- coding:utf-8 -*-
 '''
 功能说明: 目的是生成launch文件,用字符串来表示各个组件,然后
 来实现拓扑的变换吧.
 '''
 # -*- coding:utf8 -*-
 import string
+import math
+import copy
 
 OUTPUT_PATH = '../launch/'
-OUTPUT_NAME = 'three'
-OUTPUR_SUFFIX = '_auto_gen.launch'
+OUTPUT_NAME = 'many'
+OUTPUR_SUFFIX = '_.launch'
 
 class MyTemplate(string.Template):
     '''
@@ -20,139 +22,349 @@ class Topology(object):
     '''
         Topology parse
     '''
-    def __init__(self):
+    def __init__(self, topology_str):
+        self.topology_str_ = topology_str
+        self.topology_arr_ = []
+        self.topology_ = []
+        self.topology_size_ = 0
+        self.topology_set_ = []
+        self.single_str_ = ''
+
+        self.main_dict={'single_templates':'', 'mav_name':'hummingbird'}
+        #     def generate_single(self, relative_templates, base_x=0.0, base_y=0.0, base_z=0.0,
+        #  index=0, other_index=1,
+        #  is_leader=True, mav_name='hummingbird', model_name='hummingbird', take_off_height=3,
+        #  control_use_true_value=True, feature_type='orb'):
+        self.single_dict={'relative_templates' : '', 'base_x' : 0, 'base_y' : 0, 'base_z' : 0, 
+        'index' : 0, 'leader_index' : 0, 'is_leader' : True, 'mav_name' : 'hummingbird', 
+        'model_name' : 'hummingbird', 'take_off_height' : 3.0, 'control_use_true_value' : True,
+        'feature_type' : 'orb' 
+        }        
+
+        # 参数： feature_type, index, other_index, is_leader, mav_name
+        self.relative_dict={ 'index' : 0, 'other_index' : 0, 'is_leader' : True, 
+        'mav_name' : 'hummingbird', 'feature_type' : 'orb' 
+        }
+        # base_x, base_y, is_leader, base_z, feature_type
+        self.configure_base=[[-1.2,-1.2],[0,0],[1.2,1.2]]
+        self.configure=[[-1.2,-1.2],[0,0],[1.2,1.2]]
         self.main_template_ = '''
-<!-- this is for svo -->
 <launch>
-  <arg name="mav_index1" default="0"/>
-  <arg name="mav_index2" default="-1"/>
-  <arg name="mav_index3" default="2"/>
   <arg name="world_name" default="map3_world"/>
-  <!-- <arg name="log_file" default="$(arg mav_name)" />-->
-  <arg name="debug" default="false"/>
-  <arg name="gui" default="true"/>
-  <arg name="paused" default="false"/>
+  <!-- <arg name="log_file" default="%{mav_name}" />-->
   <arg name="feature_type" default="orb" />
   <arg name="control_use_true_value" default="true"/>
   <!-- The following line causes gzmsg and gzerr messages to be printed to the console
       (even when Gazebo is started through roslaunch) -->
-  <arg name="verbose" default="false"/>
 
   <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models"/>
   <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="world_name" value="$(find rotors_gazebo)/worlds/$(arg world_name).world" />
-    <arg name="debug" value="$(arg debug)" />
-    <arg name="paused" value="$(arg paused)" />
-    <arg name="gui" value="$(arg gui)" />
-    <arg name="verbose" value="$(arg verbose)"/>
+    <arg name="debug" value="false" />
+    <arg name="paused" value="false" />
+    <arg name="gui" value="true" />
+    <arg name="verbose" value="false"/>
   </include>
 
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rotors_gazebo)/rviz/sim_two_svo.rviz"/>
-
-  <include file="$(find rotors_utils)/launch/single_svo.launch">
-    <arg name="index" value="$(arg mav_index1)" />
-    <arg name="follower_index" value="$(arg mav_index2)" />
-    <arg name="follower_index_2" value="$(arg mav_index3)" />
-    <arg name="x" value="0"/>
-    <arg name="y" value="0"/>
-    <arg name="z" value="0.1"/>
-    <arg name="feature_type" value="$(arg feature_type)"/>
-    <arg name="is_leader" value="true" />
-  </include>
-
+  %{single_templates}
 </launch>
-
 '''
+        # 需要的参数：relative_templates, base_x, base_y, base_z, index, leader_index, mav_name, model_name, take_off_height, control_use_true_value, is_leader
         self.single_template_ = '''
- <include file="$(find rotors_utils)/launch/single_svo.launch">
-    <arg name="index" value="$(arg mav_index2)" />
-    <arg name="follower_index" value="$(arg mav_index1)" />
-    <arg name="x" value="%{base_x}"/>
-    <arg name="y" value="%{base_y}"/>
-    <arg name="z" value="%{base_z}"/>
-    <arg name="feature_type" value="%{feature_type}"/>
-    <arg name="is_leader" value="%{is_leader}" />
-  </include>
-        '''
-        self.relative_template_ = '''
-<!--相对位置相关的节点在此-->
-<launch>
-  <arg name="mav_name" default="hummingbird"/>
-  <arg name="feature_type" default="orb"/>
-  <arg name="is_leader" default="false" />
-  <arg name="index" default="0"/>
-  <arg name="other_index" default="1"/>
+  <!-- The following line causes gzmsg and gzerr messages to be printed to the console
+      (even when Gazebo is started through roslaunch) -->
 
+  <group ns="%{mav_name}%{index}">
+    <!--svo 节点-->
+    <include file="$(find svo_ros)/launch/test_uav.launch">
+      <arg name="cam_topic" value="camera_nadir/image_raw" />
+    </include>
+    <!--生成飞机模型-->
+    <include file="$(find rotors_gazebo)/launch/spawn_mav.launch">
+      <arg name="mav_name" value="%{mav_name}%{index}" />
+      <arg name="model" value="$(find rotors_description)/urdf/mav_generic_odometry_sensor.gazebo" />
+      <arg name="enable_logging" value="false" />
+      <arg name="enable_ground_truth" value="true" />
+      <arg name="log_file" value="%{mav_name}%{index}"/>
+      <arg name="x" value="%{base_x}"/>
+      <arg name="y" value="%{base_y}"/>
+      <arg name="z" value="%{base_z}"/>
+    </include>
+
+    %{relative_templates}
+
+    <!--控制器 -->
+    <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen" >
+      <rosparam command="load" file="$(find rotors_utils)/params/lee_controller_%{model_name}.yaml" />
+      <rosparam command="load" file="$(find rotors_utils)/params/%{model_name}.yaml" />
+      <remap from="odometry" to="odometry_sensor1/odometry" if="%{control_use_true_value}"/>
+      <remap from="odometry" to="odometry_pub_frame" unless="%{control_use_true_value}"/>
+      <param name="take_off_height" value="%{take_off_height}-2" />
+    </node>
+
+    <!--和手柄通信的节点-->
+    <node name="joy_node" pkg="joy" type="joy_node" output="screen">
+      <param name="dev" value="/dev/input/js0" />
+    </node>
+    <!--从hover_control修改过来,变得能够使用手柄控制-->
+    <!--或许这边应该换个控制器?-->
+    <!--算了不用了,改手柄的command_control吧-->
+    <node name="joy_pose" pkg="rotors_utils" type="joy_pose"  output="screen" >
+      <param name="my_id" value="%{index}"/>
+      <param name="leader_id" value="%{leader_index}"/>
+      <param name="is_follower" value="%{is_follower}"/>
+      <param name="take_off_height" value="%{take_off_height}" />
+      <param name="target_pose" value="/%{mav_name}%{leader_index}/target_pose"/>
+    </node>
+    
+    <!--手柄的具体动作-->
+    <node name="joy_control" pkg="rotors_gazebo" type="joy_control" output="screen" >
+    </node>
+
+    <!--功能是各种信息数据类型的转化-->
+    <node name="transformation" pkg="rotors_utils" type="transformation" output="screen" >
+      <param name="mag_sub_frame" value="magnetometer" />
+      <param name="mag_pub_frame" value="mag" />
+      <param name="image_sub_frame" value="camera_nadir/image_pos_vel" />
+    </node>
+
+     <node pkg="rotors_position_estimator" type="pose_estimation" name="position_estimation" output="screen" >
+      <rosparam file="$(find rotors_position_estimator)/params/simulation.yaml" />
+      <param name="nav_frame" value="/nav" />
+      <param name="publish_world_nav_transform" value="true" />
+      <remap from="raw_imu" to="imu" />
+      <remap from="svo_image" to="svo/fusion_pose" />
+      <param name="tf_prefix" value=""/>
+      <remap from="image_pos_vel" to="image_pub_frame" />
+      <remap from="magnetic" to="mag" />
+    </node>
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+  </group>
+'''
+        # 参数： feature_type, index, other_index, is_leader, mav_name, 
+        self.relative_template_ = '''
   <!--通过接收两副图像，来确定相对位置，接受的参数是：拓扑结构，自身节点的消息-->
-  <node name="$(arg feature_type)_main$(arg index)$(arg other_index)" pkg="sift"
-   type="$(arg feature_type)" output="screen" if="$(arg is_leader)">
+  <node name="%{feature_type}_main%{index}%{other_index}" pkg="sift"
+   type="%{feature_type}" output="screen" if="%{is_leader}">
     <!--载入拓扑结构数据-->
-    <param name="uav_index" value="$(arg index)"/>
-    <param name="other_index" value="$(arg other_index)"/>
-    <rosparam command="load" file="$(find rotors_utils)/params/topology.yaml" />
+    <param name="uav_index" value="%{index}"/>
+    <param name="other_index" value="%{other_index}"/>
   </node>
 
   <!--产生在L2中看F2的目标轨迹, 但是这个是F2产生的，问问老板改不改吧-->
-  <node name="follower_pose$(arg index)$(arg other_index)" pkg="rotors_utils" 
-    type="follower_pose" output="screen" if="$(arg is_leader)" >
-    <param name="my_id" value="$(arg index)"/>
-    <param name="other_id" value="$(arg other_index)"/>
-    <param name="relative_pose" value="relative_pose$(arg index)$(arg other_index)" />
-    <param name="is_leader" value="$(arg is_leader)" />
+  <node name="follower_pose%{index}%{other_index}" pkg="rotors_utils" 
+    type="follower_pose" output="screen" if="%{is_leader}" >
+    <param name="my_id" value="%{index}"/>
+    <param name="other_id" value="%{other_index}"/>
+    <param name="relative_pose" value="relative_pose%{index}%{other_index}" />
+    <param name="is_leader" value="%{is_leader}" />
   </node>
 
   <!--follower节点的期望值计算节点-->
-  <node name="trajectory_generation$(arg index)$(arg other_index)" 
-    pkg="rotors_utils" type="trajectory_generation" output="screen" if="$(arg is_leader)">
-    <param name="my_id" value="$(arg index)"/>
-    <param name="follower_id" value="$(arg other_index)"/>
-    <param name="T_L2_F2" value="/$(arg mav_name)$(arg index)/relative_pose$(arg index)$(arg other_index)"/>
-    <param name="T_LS_L2" value="/$(arg mav_name)$(arg index)/svo/fusion_pose"/>
-    <param name="T_FS_F2" value="/$(arg mav_name)$(arg other_index)/svo/fusion_pose"/>
-    <param name="T_L2_dF2" value="/$(arg mav_name)$(arg index)/leader_desired_pose$(arg index)$(arg other_index)"/>
-    <param name="T_FW_dF2" value="/$(arg mav_name)$(arg other_index)/target_pose"/>
+  <node name="trajectory_generation%{index}%{other_index}" 
+    pkg="rotors_utils" type="trajectory_generation" output="screen" if="%{is_leader}">
+    <param name="my_id" value="%{index}"/>
+    <param name="follower_id" value="%{other_index}"/>
+    <param name="T_L2_F2" value="/%{mav_name}%{index}/relative_pose%{index}%{other_index}"/>
+    <param name="T_LS_L2" value="/%{mav_name}%{index}/svo/fusion_pose"/>
+    <param name="T_FS_F2" value="/%{mav_name}%{other_index}/svo/fusion_pose"/>
+    <param name="T_L2_dF2" value="/%{mav_name}%{index}/leader_desired_pose%{index}%{other_index}"/>
+    <param name="T_FW_dF2" value="/%{mav_name}%{other_index}/target_pose"/>
   </node>
-
-</launch>
-        '''
+'''
 
     def get_topology(self):
         '''
         hello
         '''
         pass
+    
+    def generate(self, topology_str):
+        '''
+        生成主要的文件
+        第一步： 解析拓扑结构
+        第二步： 生成字符串
+        第三步： 输出到文件
+        '''
+        self.parse()
+        
+    # relative_templates, base_x, base_y, base_z, index, other_index,
+    #  mav_name, model_name, take_off_height, control_use_true_value, is_leader
+    def generate_single(self, relative_templates, base_x=0.0, base_y=0.0, base_z=0.0, index=0, leader_index=1,
+         is_follower=True, mav_name='hummingbird', model_name='hummingbird', take_off_height=3,
+         control_use_true_value=True, feature_type='orb'):
+        '''
+        生成单个飞机的launch段,
+        完成这个之前需要先完成relative
+        '''
+        single_dict = copy.deepcopy(self.single_dict)
+        single_dict['base_x']=base_x
+        single_dict['base_y']=base_y
+        single_dict['base_z']=base_z
+        single_dict['index']=index
+        single_dict['leader_index']=leader_index
+        single_dict['is_follower']=is_follower
+        single_dict['mav_name']=mav_name
+        single_dict['model_name']=model_name
+        single_dict['take_off_height']=take_off_height
+        single_dict['control_use_true_value']=control_use_true_value
+        single_dict['feature_type']=feature_type
+        return MyTemplate(self.single_template_).substitute(single_dict)    
 
-    def generate_single(self, base_x, base_y, is_leader, base_z='0', feature_type='orb'):
+    def generate_relative(self, index, other_index, is_leader, mav_name='hummingbird', feature_type='orb'):
         '''
-        生成单个飞机的launch段
+        生成获取相对位置的launch段
         '''
-        sub = {'base_x':str(base_x), 'base_y':str(base_y), 'base_z':str(base_z),
-               'feature_type':str(feature_type), 'is_leader':str(is_leader)}
-        return MyTemplate(self.single_template_).substitute(sub)
+        rel_dict=copy.deepcopy(self.relative_dict)
+        rel_dict['index']=index
+        rel_dict['other_index']=other_index
+        rel_dict['is_leader']=is_leader
+        rel_dict['mav_name']=mav_name
+        rel_dict['feature_type']=feature_type
+        return MyTemplate(self.relative_template_).substitute(rel_dict)    
 
-    def generate_relative(self, base_x, base_y, is_leader, base_z='0', feature_type='orb'):
-        '''
-        生成单个飞机的launch段
-        '''
-        sub = {'base_x':str(base_x), 'base_y':str(base_y), 'base_z':str(base_z),
-               'feature_type':str(feature_type), 'is_leader':str(is_leader)}
-        return MyTemplate(self.single_template_).substitute(sub)
+    def generate_main(self):
+        main_dict = copy.deepcopy(self.main_dict) 
+        main_dict['single_templates']=self.single_str_
+        return MyTemplate(self.main_template_).substitute(main_dict)
 
+    def get_leaders(self, index):
+        '''
+        获得他的leader的序号
+        '''
+        leaders=[]
+        for i in range(0, self.topology_size_):
+            if self.topology_[index * self.topology_size_ + i] == 1:
+                leaders.append(i)
+        return leaders
+
+    def get_followers(self, index):
+        '''
+        获得他的follower的序号
+        '''
+        followers=[]
+        for i in range(0,self.topology_size_):
+            if self.topology_[index + self.topology_size_ * i] == 1:
+                followers.append(i)
+        return followers
+
+    def write_file(self):
+        '''
+        要写三个文件
+        一个是many_svo
+        一个是single
+        一个是relative
+        '''
+        launch = open(OUTPUT_PATH + 'launch' + OUTPUR_SUFFIX,'w')
+        launch.write(self.str_)
+        launch.close()
+        pass
+    
     def parse(self):
         '''
         parse
+        首先分隔字符串，得到数组大小
+        然后解析出拓扑大小，也就是飞机个数
+        再分析出是leader还是follower，以及隶属关系是怎样的
         '''
+        self.topology_arr_ = self.topology_str_.split()
+        self.topology_size_ = int(math.sqrt(len(self.topology_arr_)))
+        assert self.topology_size_ ** 2 == len(self.topology_arr_)
+        self.topology_.clear()
+        for i in range(0, len(self.topology_arr_)):
+            if self.topology_arr_[i] == '1':
+                self.topology_set_.append((i%self.topology_size_,i//self.topology_size_))
+        
+        self.relative_strs_ = [''] * self.topology_size_
+        self.single_strs_ = [''] * self.topology_size_
+
+    def config_single(self):
         pass
+
+    def test_leader(self, index):
+        for i in self.topology_set_:
+            if i[0] == index:
+                return True
+        return False
+    
+    def test_follower(self, index):
+        for i in self.topology_set_:
+            if i[1] == index:
+                return True
+        return False
+    
+    def config_relative(self):
+        pass
+
+    def config_many(self):
+        '''
+        设置参数
+        输入为topology block，然后设置参数吧
+        '''
+        # self.configure = copy.deepcopy(self.configure_base)
+        # for i in range(0, len(self.topology_block_)):
+        #     # leader 鉴定
+        #     # 如果存在follower，则是leader
+        #     if len(self.topology_block_[i][1]) > 0:
+        #         self.configure[i].append(True)
+        #     else:
+        #         self.configure[i].append(False)
+            
+        #     # 如果存在leader，则是follower
+        #     if len(self.topology_block_[i][1]) > 0:
+        #         pass
+
+    def config(self):
+        for i in range(0,len(self.topology_set_)):
+            # 先识别relatives
+            leader_index, follower_index = self.topology_set_[i]
+            self.relative_strs_[leader_index]+=self.generate_relative(leader_index,follower_index,True)
+
+        for i in range(0,len(self.relative_strs_)):
+            self.relative_strs_[i] = self.relative_strs_[i].replace('True','true').replace('False','false')
+
+        self.single_str_ = ''
+        # 把relatives放进single中
+        for i in range(0,len(self.single_strs_)):
+            # relative_templates, base_x, base_y, base_z, index, leader_index, is_follower, 
+            #  mav_name, model_name, take_off_height, control_use_true_value, is_leader
+            index = i
+            is_follower = self.test_follower(index)
+            leader_index = 0
+            self.single_strs_[i] = self.generate_single(relative_templates=self.relative_strs_[i],
+            base_x=(i-1)*1.2, base_y=(i-1)*1.2, is_follower=is_follower, index=index ).replace('True','true').replace('False','false')
+            self.single_str_ += self.single_strs_[i]
+
+        # 最后替换掉main launch文件里的singles_templates
+        self.str_ = self.generate_main()
+
+        print(self.str_)
+        self.config_many()
+        self.config_single()
+        self.config_relative()
+        
+    def run(self):
+        '''
+        主要流程
+        先解析
+        然后设置configure
+        '''
+        self.parse()
+        self.config()
+        self.write_file()
 
 def main():
     '''
     main
     '''
-    top_ = Topology()
-    print(top_.generate_single(2, 0, False))
-
-
+    top_ = Topology('0 0 0 1 0 0 1 0 0')
+    top_.run()
+    print(top_.topology_set_)
+    # print(top_.generate_single(2, 0, False))
 
 if __name__ == '__main__':
     main()

@@ -98,6 +98,8 @@ class JoyPose {
   bool is_leader_;
   bool is_follower_;
   bool fly_by_joy_;
+  int my_id_;
+  int leader_id_;
 
   // mav_msgs::RollPitchYawrateThrust control_msg_;
   geometry_msgs::PoseStamped pose_;
@@ -106,8 +108,6 @@ class JoyPose {
 
   double take_off_height_;
   ros::Timer timer_;
-  int my_id_;
-  int follower_id_;
 
   std::string base_link_frame_;
   std::string world_frame_;
