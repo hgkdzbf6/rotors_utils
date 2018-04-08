@@ -10,9 +10,12 @@ TrajectoryGeneration::TrajectoryGeneration(){
   // 这边的参数是瞎写的，以launch为准
   pnh.param<std::string>("T_L2_F2",T_L2_F2_str_,"relative_pose01");
   pnh.param<std::string>("T_LS_L2",T_LS_L2_str_,"/hummingbird0/svo/fusion_pose");
+
   pnh.param<std::string>("T_FS_F2",T_FS_F2_str_,"/hummingbird1/svo/fusion_pose");
   pnh.param<std::string>("T_L2_dF2",T_L2_dF2_str_,"/hummingbird1/leader_desired_pose");
   pnh.param<std::string>("T_FW_dF2",T_FW_dF2_str_,"target_pose");
+  
+  pnh.param<bool>("is_self_control",is_self_control_,false);
   // 两个SVO坐标系下面的相对位姿, 这个是节点计算出来的
   // 第一位T是SE3，S是Sim3，
   // 第二位是到哪个坐标系
@@ -21,8 +24,10 @@ TrajectoryGeneration::TrajectoryGeneration(){
   T_L2_F2_sub_=nh_.subscribe(T_L2_F2_str_,5,&TrajectoryGeneration::T_L2_F2Callback,this);
   // leader在leader SVO坐标系下面的坐标
   T_LS_L2_sub_=nh_.subscribe(T_LS_L2_str_,5,&TrajectoryGeneration::T_LS_L2Callback,this);
-  // follower在follower SVO坐标系下面的坐标
-  T_FS_F2_sub_=nh_.subscribe(T_FS_F2_str_,5,&TrajectoryGeneration::T_FS_F2Callback,this);
+  if(!is_self_control_){
+    // follower在follower SVO坐标系下面的坐标
+    T_FS_F2_sub_=nh_.subscribe(T_FS_F2_str_,5,&TrajectoryGeneration::T_FS_F2Callback,this);
+  }
   // 在leader坐标系下，follower的期望位置
   // TODO: 这块逻辑应该改改，应该是leader给的位置。日后再改吧。
   T_L2_dF2_sub_=nh_.subscribe(T_L2_dF2_str_,5,&TrajectoryGeneration::T_L2_dF2Callback,this);
@@ -60,6 +65,11 @@ void TrajectoryGeneration::T_LS_L2Callback(const geometry_msgs::PoseWithCovarian
   geoPose2SE3(msg->pose.pose,T_LS_L2_);
   // T_LS_L2_ *= x_rot_se3 ;
   SE32Sim3(T_LS_L2_,1,S_LS_L2_);
+  if(is_self_control_){  
+    geoPose2SE3(msg->pose.pose,T_FS_F2_);
+    // T_LS_L2_ *= x_rot_se3 ;
+    SE32Sim3(T_FS_F2_,1,S_FS_F2_);
+  }
 }
 
 void TrajectoryGeneration::T_FS_F2Callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg){
@@ -81,8 +91,13 @@ void TrajectoryGeneration::TimerCallback(const ros::TimerEvent & e){
   // S_F_dF_ = S_L_F_ * S_L2_L_ * S_L2_dF_.inverse();  
   // S_LW_FW_ = S_LS_LW_.inverse() * S_LS_L2_ * S_L2_F2_ * S_FS_F2_.inverse() * S_FS_FW_;
   // S_FW_dF2_ = S_LW_FW_.inverse() * S_LS_LW_.inverse() * S_LS_L2_ * S_L2_dF2_;
-  // S_FW_dF2_ = S_LW_FW_.inverse() * S_LS_LW_.inverse() * S_FS_F2_ * S_L2_dF2_;
-  S_FW_dF2_ = S_LW_FW_ * S_L2_dF2_.inverse();
+  if(is_self_control_){
+    S_FW_dF2_ =                                            S_L2_dF2_.inverse();
+  }else{
+    // S_FW_dF2_ = S_LW_FW_ *                                 S_L2_dF2_.inverse();
+    // S_FW_dF2_ = S_LW_FW_ * S_LS_LW_.inverse() * S_LS_L2_ * S_L2_dF2_.inverse();
+    S_FW_dF2_ =                                    S_LS_L2_ * S_L2_dF2_.inverse();
+  }
   // S_L_F_ = T_L_F 
   // S_F_dF_ = S_L_F_.inverse() * S_L2_dF_;
   T_FW_dF2_=S_FW_dF2_.to_SE3();

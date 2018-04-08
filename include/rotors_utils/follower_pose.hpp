@@ -21,21 +21,21 @@ struct Circle{
 
 	bool is_clockwise_;
 	// 半径的平方,米
-	float radius2_;
+	double radius2_;
 	// 半径,米
-	float radius_;
+	double radius_;
 
 	// 已经流逝的时间
-	float t_;
+	double t_;
 	// 角度
-	float theta_;
+	double theta_;
 	// 初始角度
-	float theta0_;
+	double theta0_;
 	bool is_initialized_;
 	// 周期
-	float T_;
+	double T_;
 	Circle():is_initialized_(false){}
-	Circle(geometry_msgs::PoseStamped pose, float T=100, double px=0.0,double py=0.0)
+	explicit Circle(geometry_msgs::PoseStamped pose, double T=100, double px=0.0,double py=0.0)
 		:t_(0),theta_(0),is_initialized_(true),T_(T){
 		radius2_=pose.pose.position.x*pose.pose.position.x+pose.pose.position.y*pose.pose.position.y;
 		radius_=sqrt(radius2_);
@@ -46,7 +46,16 @@ struct Circle{
 		pose_=pose;
 	}
 
-	geometry_msgs::PoseStamped update(float dt){
+	explicit Circle(double radius, double T=100, double px=0.0, double py=0.0)
+		:t_(0),theta_(0),is_initialized_(true),T_(T),radius_(radius),
+		radius2_(radius*radius),theta0_(0){
+		pose_.header.stamp=ros::Time::now();
+		pose_base_=pose_;
+		pose_base_.pose.position.x=px;
+		pose_base_.pose.position.y=py;
+	}
+
+	geometry_msgs::PoseStamped update(double dt){
 		if(dt<0.1)dt=0.1;
 		if(dt>0.2)dt=0.2;
 		this->t_+=dt;
@@ -77,6 +86,7 @@ struct Circle{
 	}
 };
 
+// 保持原来位置的结构体
 struct KeepStruct{
 	// 开始的位置
 	geometry_msgs::PoseStamped base_pose;
@@ -96,11 +106,11 @@ private:
 	ros::Publisher trajectory_base_pub_;
 
 	ros::Subscriber relative_sub_;
-	bool is_leader_;
 	bool receive_first_msg_;
 	bool follower_pose_start_;
 
 	bool new_data_approach_;
+	bool is_leader_;
 	ros::ServiceServer server_;
 
 	Circle circle_;

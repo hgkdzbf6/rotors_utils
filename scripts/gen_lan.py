@@ -42,8 +42,8 @@ class Topology(object):
         }        
 
         # 参数： feature_type, index, other_index, is_leader, mav_name
-        self.relative_dict={ 'index' : 0, 'other_index' : 0, 'is_leader' : True, 
-        'mav_name' : 'hummingbird', 'feature_type' : 'orb' 
+        self.relative_dict={ 'index' : 0, 'other_index' : 0, 
+        'mav_name' : 'hummingbird', 'feature_type' : 'orb' , 'is_self_control' : False
         }
         self.main_template_ = '''
 <launch>
@@ -105,6 +105,7 @@ class Topology(object):
     <node name="joy_node" pkg="joy" type="joy_node" output="screen">
       <param name="dev" value="/dev/input/js0" />
     </node>
+
     <!--从hover_control修改过来,变得能够使用手柄控制-->
     <!--或许这边应该换个控制器?-->
     <!--算了不用了,改手柄的command_control吧-->
@@ -120,6 +121,9 @@ class Topology(object):
     
     <!--手柄的具体动作-->
     <node name="joy_control" pkg="rotors_gazebo" type="joy_control" output="screen" >
+    </node>
+
+    <node name="buffer" pkg="rotors_utils" type="buffer" output="screen">
     </node>
 
     <!--功能是各种信息数据类型的转化-->
@@ -146,10 +150,10 @@ class Topology(object):
 '''
         # 参数： feature_type, index, other_index, is_leader, mav_name, 
         self.relative_template_ = '''
-  <!--relative start!-->
+  <!--relative start for %{index} %{other_index}!-->
   <!--通过接收两副图像，来确定相对位置，接受的参数是：拓扑结构，自身节点的消息-->
   <node name="%{feature_type}_main%{index}%{other_index}" pkg="sift"
-   type="%{feature_type}" output="screen" if="%{is_leader}">
+   type="%{feature_type}" output="screen">
     <!--载入拓扑结构数据-->
     <param name="uav_index" value="%{index}"/>
     <param name="other_index" value="%{other_index}"/>
@@ -158,25 +162,26 @@ class Topology(object):
 
   <!--产生在L2中看F2的目标轨迹, 但是这个是F2产生的，问问老板改不改吧-->
   <node name="follower_pose%{index}%{other_index}" pkg="rotors_utils" 
-    type="follower_pose" output="screen" if="%{is_leader}" >
+    type="follower_pose" output="screen" >
     <param name="my_id" value="%{index}"/>
     <param name="other_id" value="%{other_index}"/>
     <param name="relative_pose" value="relative_pose%{index}%{other_index}" />
     <param name="follower_pose" value="follower_pose%{index}%{other_index}" />
-    <param name="is_leader" value="%{is_leader}" />
   </node>
 
   <!--follower节点的期望值计算节点-->
   <node name="trajectory_generation%{index}%{other_index}" 
-    pkg="rotors_utils" type="trajectory_generation" output="screen" if="%{is_leader}">
+    pkg="rotors_utils" type="trajectory_generation" output="screen" >
     <param name="my_id" value="%{index}"/>
     <param name="follower_id" value="%{other_index}"/>
+    <param name="is_self_control" value="%{is_self_control}"/>
     <param name="T_L2_F2" value="/%{mav_name}%{index}/relative_pose%{index}%{other_index}"/>
     <param name="T_LS_L2" value="/%{mav_name}%{index}/svo/fusion_pose"/>
     <param name="T_FS_F2" value="/%{mav_name}%{other_index}/svo/fusion_pose"/>
     <param name="T_L2_dF2" value="/%{mav_name}%{index}/leader_desired_pose%{index}%{other_index}"/>
     <param name="T_FW_dF2" value="/%{mav_name}%{other_index}/target_pose"/>
   </node>
+  <!--relative end for %{index} %{other_index}!-->
 '''
         
     # relative_templates, base_x, base_y, base_z, index, other_index,
@@ -204,14 +209,14 @@ class Topology(object):
         single_dict['target_pose_index']=target_pose_index
         return MyTemplate(self.single_template_).substitute(single_dict)    
 
-    def generate_relative(self, index, other_index, is_leader, mav_name='hummingbird', feature_type='orb'):
+    def generate_relative(self, index, other_index,is_self_control=False, mav_name='hummingbird', feature_type='orb'):
         '''
         生成获取相对位置的launch段
         '''
         rel_dict=copy.deepcopy(self.relative_dict)
         rel_dict['index']=index
         rel_dict['other_index']=other_index
-        rel_dict['is_leader']=is_leader
+        rel_dict['is_self_control']=is_self_control
         rel_dict['mav_name']=mav_name
         rel_dict['feature_type']=feature_type
         return MyTemplate(self.relative_template_).substitute(rel_dict)    
@@ -276,7 +281,11 @@ class Topology(object):
         for i in range(0,len(self.topology_set_)):
             # 先识别relatives
             leader_index, follower_index = self.topology_set_[i]
-            self.relative_strs_[leader_index]+=self.generate_relative(leader_index,follower_index,True)
+            is_self_control = False
+            if(leader_index == follower_index):
+                is_self_control = True
+            self.relative_strs_[leader_index] += self.generate_relative(leader_index,
+                follower_index, is_self_control=is_self_control)
 
         for i in range(0,len(self.relative_strs_)):
             self.relative_strs_[i] = self.relative_strs_[i].replace('True','true').replace('False','false')
@@ -320,8 +329,12 @@ def main():
     '''
     main
     '''
-    top_ = Topology('0 0 0 1 0 0 1 0 0',[[0,0],[1.2,1.2],[-1.2,-1.2]])
-    # top_ = Topology('0 0 1 0',[[0,0],[1.2,1.2]])
+    # top_ = Topology('0 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0'
+    #     ,[[0,0],[1.2,1.2],[-1.2,-1.2],[1.2,-1.2],[-1.2,1.2]])
+    # top_ = Topology('0 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0',[[0,0],[1.2,1.2],[-1.2,-1.2],[1.2,-1.2]])
+    top_ = Topology('1 0 0 1 0 0 1 0 0',[[0,0],[1.2,1.2],[-1.2,1.2]])
+    # top_ = Topology('0 0 0 1 0 0 0 1 0',[[-1.2,-1.2],[0,0],[1.2,1.2]])
+    # top_ = Topology('1 0 1 0',[[0,0],[1.2,1.2]])
     # top_ = Topology('0',[[0,0]])
     top_.run()
     # print(top_.relative_strs_)

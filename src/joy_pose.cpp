@@ -60,7 +60,6 @@ JoyPose::JoyPose():fly_by_joy_(true),yaw_(0) {
   // 起飞
   pnh.param<int>("take_off_button", buttons_.takeoff.button, 1);
   
-
   pnh.param<double>("slow_factor", slow_factor_, 0.2);
 
   pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped> ("command_pose", 10);
@@ -72,6 +71,8 @@ JoyPose::JoyPose():fly_by_joy_(true),yaw_(0) {
   nh_.param<std::string>("world_frame", world_frame_, "world");
   nh_.param<std::string>("base_stabilized_frame", base_stabilized_frame_, "base_stabilized");
 
+  pnh.param<int >("mode", mode_.mode, 0);
+  
   taking_off_client_ = nh_.serviceClient<std_srvs::Trigger>("taking_off");
   
   pnh.param<std::string>("receive_image", receive_image_str_, "receive_image01");
@@ -119,7 +120,7 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
 
   // 接收图像
   // 这里数量要对等
-  if(is_follower_){
+  // if(is_follower_){
     if (GetButton(buttons_.receive_image)){
       std_srvs::Trigger receive_image_srv;
       if(receive_image_client_.call(receive_image_srv)){
@@ -128,11 +129,13 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
         ROS_ERROR("Failed to call service %d receive_image, %s",my_id_, receive_image_str_.c_str());
       }
     }
-  }
+  // }
   // 从机飞行套路
-  if(is_follower_){
+  // if(is_follower_){
+    // 按下左边的按键
     if (GetButton(buttons_.go)){
       ROS_INFO("wtf");
+      mode_.state= CONTROL_SWITCHED;
       rotors_comm::SuccessiveControl follower_pose_srv;
       follower_pose_srv.request.pose=pose_;
       if(follower_pose_client_.call(follower_pose_srv)){
@@ -143,7 +146,7 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
         ROS_ERROR("Failed to call service %d go",my_id_);
       }    
     }
-  }
+  // }
   pose_.header.stamp = now;
   pose_.header.frame_id = world_frame_;
 
@@ -151,15 +154,19 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
   q.setRPY(0.0, 0.0, yaw_);
   pose_.pose.orientation = tf2::toMsg(q);
   // 首先都被手柄控制
-  if(fly_by_joy_){
-    pose_.pose.position.x += (cos(yaw_) * GetAxis(axes_.x) - sin(yaw_) * GetAxis(axes_.y)) * dt;
-    pose_.pose.position.y += (cos(yaw_) * GetAxis(axes_.y) + sin(yaw_) * GetAxis(axes_.x)) * dt;
+  if(mode_.state == CONTROL_SWITCHED){
+    pose_.pose.position.x = target_pose_.pose.position.x;
+    pose_.pose.position.y = target_pose_.pose.position.y;
+    pose_.pose.position.z = take_off_height_; 
+  } else if(fly_by_joy_) {
+    pose_.pose.position.x += (cos(yaw_) * GetAxis(axes_.x) - sin(yaw_) * GetAxis(axes_.y)) * dt / 5;
+    pose_.pose.position.y += (cos(yaw_) * GetAxis(axes_.y) + sin(yaw_) * GetAxis(axes_.x)) * dt / 5;
     yaw_ += GetAxis(axes_.yaw) * M_PI/180.0 * dt /3;
-  } else if(is_follower_){
+  } else if(is_follower_) {
     // 这边注释掉，follower就停掉了。
-    pose_.pose.position.x=target_pose_.pose.position.x;
-    pose_.pose.position.y=target_pose_.pose.position.y;
-    pose_.pose.position.z=take_off_height_; 
+    pose_.pose.position.x = target_pose_.pose.position.x;
+    pose_.pose.position.y = target_pose_.pose.position.y;
+    pose_.pose.position.z = take_off_height_; 
     // ROS_INFO_STREAM(std::endl<<"  target x:"<<pose_.pose.position.x
     // <<"  target y:"<< pose_.pose.position.y<<std::endl);
   }

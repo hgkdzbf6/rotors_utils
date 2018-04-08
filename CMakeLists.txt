@@ -40,6 +40,7 @@ catkin_package(
 
 
 include_directories(
+  include ${catkin_INCLUDE_DIRS}
   include 
   ${catkin_INCLUDE_DIRS}
   ${Sophus_INCLUDE_DIRS}
@@ -92,4 +93,14 @@ add_executable(follower_pose
 add_dependencies(follower_pose  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(follower_pose 
   ${catkin_LIBRARIES} 
+)
+
+
+add_executable(buffer
+  include/rotors_utils/buffer.hpp
+  src/buffer.cpp
+)
+add_dependencies(buffer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(buffer
+  ${catkin_LIBRARIES}
 )

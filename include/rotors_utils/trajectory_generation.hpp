@@ -17,6 +17,7 @@ private:
   ros::Timer timer_;
   int my_id_;
   int follower_id_;
+	bool is_self_control_;
 
   ros::Publisher follower_pub_;
   ros::Subscriber T_L2_F2_sub_;

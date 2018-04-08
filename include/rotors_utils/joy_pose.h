@@ -74,6 +74,21 @@ struct Buttons {
 //   double rate_yaw;
 //   double thrust;
 // };
+enum ControlState{
+  // 一开始肯定是手柄控制
+  CONTROL_BEGIN,
+  // 控制使用新的控制模式来控制
+  CONTROL_SWITCHED,
+  // 控制结束
+  CONTROL_END,
+};
+
+typedef struct ControlMode_{
+  // 控制模式的序号
+  int mode;
+  // 控制模式的状态
+  ControlState state;
+}ControlMode;
 
 /**
 * 功能: 产生command_pose
@@ -94,6 +109,8 @@ class JoyPose {
   std::string namespace_;
   std::string receive_image_str_;
   std::string follower_pose_str_;
+  
+  ControlMode mode_;
   double slow_factor_;
   Axes axes_;
   Buttons buttons_;
