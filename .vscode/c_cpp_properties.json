@@ -1,37 +1,68 @@
 {
-  "configurations": [
-    {
-      "browse": {
-        "databaseFilename": "",
-        "limitSymbolsToIncludedHeaders": true
-      },
-      "includePath": [
-        "/home/zbf/ws/rotors_ws/devel/include",
-        "/opt/ros/kinetic/include",
-        "/home/zbf/ws/rotors_ws/src/fast/include",
-        "/home/zbf/ws/rotors_ws/src/hector_localization/hector_pose_estimation/include",
-        "/home/zbf/ws/rotors_ws/src/hector_localization/hector_pose_estimation_core/include",
-        "/home/zbf/ws/rotors_ws/src/hector_uav_msgs/include",
-        "/home/zbf/ws/rotors_ws/src/mavros/libmavconn/include",
-        "/home/zbf/ws/rotors_ws/src/mav_comm/mav_msgs/include",
-        "/home/zbf/ws/rotors_ws/src/mavros/mavros/include",
-        "/home/zbf/ws/rotors_ws/src/mavros/mavros_msgs/include",
-        "/home/zbf/ws/rotors_ws/src/mav_comm/planning_msgs/include",
-        "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_control/include",
-        "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_gazebo_plugins/include",
-        "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_hil_interface/include",
-        "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_joy_interface/include",
-        "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_position_estimator/include",
-        "/home/zbf/ws/rotors_ws/src/rotors_utils/include",
-        "/home/zbf/ws/rotors_ws/src/sift/include",
-        "/home/zbf/ws/rotors_ws/src/rpg_svo/svo/include",
-        "/home/zbf/ws/rotors_ws/src/rpg_svo/svo_ros/include",
-        "/home/zbf/ws/rotors_ws/src/mavros/test_mavros/include",
-        "/home/zbf/ws/rotors_ws/src/rpg_vikit/vikit_common/include",
-        "/home/zbf/ws/rotors_ws/src/rpg_vikit/vikit_ros/include",
-        "/usr/include"
-      ],
-      "name": "Linux"
-    }
-  ]
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "",
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "/home/zbf/ws/rotors_ws/devel/include",
+                    "/opt/ros/kinetic/include",
+                    "/home/zbf/ws/rotors_ws/src/fast/include",
+                    "/home/zbf/ws/rotors_ws/src/hector_localization/hector_pose_estimation/include",
+                    "/home/zbf/ws/rotors_ws/src/hector_localization/hector_pose_estimation_core/include",
+                    "/home/zbf/ws/rotors_ws/src/hector_uav_msgs/include",
+                    "/home/zbf/ws/rotors_ws/src/mavros/libmavconn/include",
+                    "/home/zbf/ws/rotors_ws/src/mav_comm/mav_msgs/include",
+                    "/home/zbf/ws/rotors_ws/src/mavros/mavros/include",
+                    "/home/zbf/ws/rotors_ws/src/mavros/mavros_msgs/include",
+                    "/home/zbf/ws/rotors_ws/src/mav_comm/planning_msgs/include",
+                    "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_control/include",
+                    "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_gazebo_plugins/include",
+                    "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_hil_interface/include",
+                    "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_joy_interface/include",
+                    "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_position_estimator/include",
+                    "/home/zbf/ws/rotors_ws/src/rotors_utils/include",
+                    "/home/zbf/ws/rotors_ws/src/sift/include",
+                    "/home/zbf/ws/rotors_ws/src/rpg_svo/svo/include",
+                    "/home/zbf/ws/rotors_ws/src/rpg_svo/svo_ros/include",
+                    "/home/zbf/ws/rotors_ws/src/mavros/test_mavros/include",
+                    "/home/zbf/ws/rotors_ws/src/rpg_vikit/vikit_common/include",
+                    "/home/zbf/ws/rotors_ws/src/rpg_vikit/vikit_ros/include",
+                    "/usr/include"
+                ]
+            },
+            "includePath": [
+                "/home/zbf/ws/rotors_ws/devel/include",
+                "/opt/ros/kinetic/include",
+                "/home/zbf/ws/rotors_ws/src/fast/include",
+                "/home/zbf/ws/rotors_ws/src/hector_localization/hector_pose_estimation/include",
+                "/home/zbf/ws/rotors_ws/src/hector_localization/hector_pose_estimation_core/include",
+                "/home/zbf/ws/rotors_ws/src/hector_uav_msgs/include",
+                "/home/zbf/ws/rotors_ws/src/mavros/libmavconn/include",
+                "/home/zbf/ws/rotors_ws/src/mav_comm/mav_msgs/include",
+                "/home/zbf/ws/rotors_ws/src/mavros/mavros/include",
+                "/home/zbf/ws/rotors_ws/src/mavros/mavros_msgs/include",
+                "/home/zbf/ws/rotors_ws/src/mav_comm/planning_msgs/include",
+                "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_control/include",
+                "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_gazebo_plugins/include",
+                "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_hil_interface/include",
+                "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_joy_interface/include",
+                "/home/zbf/ws/rotors_ws/src/rotors_simulator/rotors_position_estimator/include",
+                "/home/zbf/ws/rotors_ws/src/rotors_utils/include",
+                "/home/zbf/ws/rotors_ws/src/sift/include",
+                "/home/zbf/ws/rotors_ws/src/rpg_svo/svo/include",
+                "/home/zbf/ws/rotors_ws/src/rpg_svo/svo_ros/include",
+                "/home/zbf/ws/rotors_ws/src/mavros/test_mavros/include",
+                "/home/zbf/ws/rotors_ws/src/rpg_vikit/vikit_common/include",
+                "/home/zbf/ws/rotors_ws/src/rpg_vikit/vikit_ros/include",
+                "/usr/include"
+            ],
+            "name": "Linux",
+            "intelliSenseMode": "clang-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 3
 }

@@ -38,7 +38,7 @@ class Topology(object):
         self.single_dict={'relative_templates' : '', 'base_x' : 0, 'base_y' : 0, 'base_z' : 0, 
         'index' : 0, 'leader_index' : 0, 'is_leader' : True, 'mav_name' : 'hummingbird', 
         'model_name' : 'hummingbird', 'take_off_height' : 3.0, 'control_use_true_value' : False,
-        'feature_type' : 'orb' 
+        'feature_type' : 'orb' , 'real_joy' : False
         }        
 
         # 参数： feature_type, index, other_index, is_leader, mav_name
@@ -102,8 +102,12 @@ class Topology(object):
     </node>
 
     <!--和手柄通信的节点-->
-    <node name="joy_node" pkg="joy" type="joy_node" output="screen">
+    <node name="joy_node" pkg="joy" type="joy_node" output="screen" if="%{real_joy}">
       <param name="dev" value="/dev/input/js0" />
+    </node>    
+    
+    <!--用键盘模拟出的手柄节点-->
+    <node name="joy_sim" pkg="rotors_utils" type="joy_sim" output="screen" unless="%{real_joy}"> 
     </node>
 
     <!--从hover_control修改过来,变得能够使用手柄控制-->
@@ -188,7 +192,7 @@ class Topology(object):
     #  mav_name, model_name, take_off_height, control_use_true_value, is_leader
     def generate_single(self, relative_templates, base_x=0.0, base_y=0.0, base_z=0.0, index=0, leader_index=1,
          is_follower=True, mav_name='hummingbird', model_name='hummingbird', take_off_height=3,
-         control_use_true_value=False, feature_type='orb', target_pose_index=0):
+         control_use_true_value=False, feature_type='orb', target_pose_index=0, real_joy=True):
         '''
         生成单个飞机的launch段,
         完成这个之前需要先完成relative
@@ -207,6 +211,7 @@ class Topology(object):
         single_dict['control_use_true_value']=control_use_true_value
         single_dict['feature_type']=feature_type
         single_dict['target_pose_index']=target_pose_index
+        single_dict['real_joy']=real_joy
         return MyTemplate(self.single_template_).substitute(single_dict)    
 
     def generate_relative(self, index, other_index,is_self_control=False, mav_name='hummingbird', feature_type='orb'):
@@ -303,7 +308,7 @@ class Topology(object):
                         # base_y=(i-1)*1.2, 
                         base_y=self.pose[i][1], 
                         is_follower=is_follower, index=index,
-                        leader_index=leader_index, 
+                        leader_index=leader_index, real_joy=False
                         ).replace('True','true').replace('False','false')
             self.single_str_ += self.single_strs_[i]
 
@@ -329,12 +334,12 @@ def main():
     '''
     main
     '''
-    top_ = Topology('1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0'
-        ,[[0,0],[1.2,1.2],[-1.2,-1.2],[1.2,-1.2],[-1.2,1.2]])
+    # top_ = Topology('1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0'
+    #     ,[[0,0],[1.2,1.2],[-1.2,-1.2],[1.2,-1.2],[-1.2,1.2]])
     # top_ = Topology('0 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0',[[0,0],[1.2,1.2],[-1.2,-1.2],[1.2,-1.2]])
     # top_ = Topology('1 0 0 1 0 0 1 0 0',[[0,0],[1.2,1.2],[-1.2,1.2]])
     # top_ = Topology('0 0 0 1 0 0 0 1 0',[[-1.2,-1.2],[0,0],[1.2,1.2]])
-    # top_ = Topology('1 0 1 0',[[0,0],[1.2,1.2]])
+    top_ = Topology('1 0 1 0',[[0,0],[1.2,1.2]])
     # top_ = Topology('0',[[0,0]])
     top_.run()
     # print(top_.relative_strs_)

@@ -104,3 +104,13 @@ add_dependencies(buffer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TA
 target_link_libraries(buffer
   ${catkin_LIBRARIES}
 )
+
+
+add_executable(joy_sim
+  include/rotors_utils/joy_sim.h
+  src/joy_sim.cpp
+)
+add_dependencies(joy_sim ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(joy_sim
+  ${catkin_LIBRARIES}
+)
