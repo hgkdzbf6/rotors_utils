@@ -114,14 +114,15 @@ void JoySim::keyLoop()
         break;
     }
     joy_.header.stamp = ros::Time::now();
-    if(dirty > 0)
+    if(dirty == dirty_num)
     {
       pub_.publish(joy_);    
       dirty--;
+    }else if(dirty>0){
+      pub_.publish(empty_joy_);    
+      dirty--;
     }
   }
-
-
   return;
 }
 
@@ -133,5 +134,3 @@ int main(int argc, char** argv)
   joy_sim.keyLoop();
   return(0);
 }
-
-

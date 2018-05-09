@@ -105,12 +105,20 @@ target_link_libraries(buffer
   ${catkin_LIBRARIES}
 )
 
-
 add_executable(joy_sim
   include/rotors_utils/joy_sim.h
   src/joy_sim.cpp
 )
 add_dependencies(joy_sim ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(joy_sim
+  ${catkin_LIBRARIES}
+)
+
+add_executable(dji_adapter
+  include/rotors_utils/dji_adapter.h
+  src/dji_adapter.cpp
+)
+add_dependencies(dji_adapter ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(dji_adapter
   ${catkin_LIBRARIES}
 )

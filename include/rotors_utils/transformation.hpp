@@ -32,6 +32,7 @@ private:
   ros::NodeHandle nh_;
 
   ros::Publisher mag_pub_;
+  ros::Subscriber attitude_sub_;
   ros::Subscriber mag_sub_;
 
   ros::Subscriber filtered_imu_sub_;
@@ -44,10 +45,7 @@ private:
   ros::Subscriber estimate_pose_sub_;
   ros::Subscriber velocity_sub_;
   ros::Subscriber rate_sub_;
-
-  ros::Publisher image_pub_;
-  ros::Subscriber image_sub_;
-
+  
   ros::Publisher svo_pub_;
   ros::Subscriber svo_sub_;
 
@@ -55,23 +53,24 @@ private:
 
   std::string mag_pub_frame_;
   std::string mag_sub_frame_;
+  std::string attitude_sub_frame_;
   std::string filtered_imu_sub_frame_;
   std::string pressure_sub_frame_;
   std::string baro_pub_frame_;
   std::string odometry_pub_frame_;
   std::string odometry_sub_frame_;
   std::string estimate_pose_frame_;
-  std::string image_sub_frame_;
-  std::string image_pub_frame_;
   std::string svo_sub_frame_;
   std::string svo_pub_frame_;
+  std::string velocity_sub_frame_;
+  std::string rate_sub_frame_;
 
   double ref_north_;
   double ref_east_;
   double ref_down_;
+
+  bool is_mag_attitude_;
   
-  geometry_msgs::TwistStamped base_twist_;
-  geometry_msgs::TwistStamped twist_;
   hector_uav_msgs::Altimeter baro_;
   geometry_msgs::PoseStamped pose_;
   nav_msgs::Odometry odometry_;
@@ -81,16 +80,16 @@ private:
 
   geometry_msgs::Vector3Stamped velocity_,rate_;
   void SvoCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr & msg);
-  void ImageTwistCallback(const geometry_msgs::TwistStampedConstPtr & msg);
   void TimerCallback(const ros::TimerEvent & e);
   void VelocityCallback(const geometry_msgs::Vector3StampedConstPtr & msg);
   void RateCallback(const geometry_msgs::Vector3StampedConstPtr & msg);
   void PressureCallback(const sensor_msgs::FluidPressureConstPtr & msg);
   void ImuCallback(const sensor_msgs::ImuConstPtr & msg);
   void MagCallback(const sensor_msgs::MagneticFieldConstPtr & msg);
+  void AttitudeCallback(const geometry_msgs::QuaternionStampedConstPtr & msg);
   void EstimatePoseCallback(const geometry_msgs::PoseStampedConstPtr & msg);
   void OdometryCallback(const nav_msgs::OdometryConstPtr & msg);
-
+  
   static inline hector_uav_msgs::Altimeter::_altitude_type altitudeFromPressure(
     hector_uav_msgs::Altimeter::_pressure_type pressure, 
     hector_uav_msgs::Altimeter::_qnh_type qnh = STANDARD_PRESSURE) {

@@ -54,40 +54,34 @@ class Topology(object):
   <!-- The following line causes gzmsg and gzerr messages to be printed to the console
       (even when Gazebo is started through roslaunch) -->
 
-  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models"/>
-  <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
-  <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(find rotors_gazebo)/worlds/$(arg world_name).world" />
-    <arg name="debug" value="false" />
-    <arg name="paused" value="false" />
-    <arg name="gui" value="true" />
-    <arg name="verbose" value="false"/>
-  </include>
-
-  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rotors_gazebo)/rviz/sim_two_svo.rviz"/>
-  %{single_templates}
+    %{single_templates}
 </launch>
 '''
         # 需要的参数：relative_templates, base_x, base_y, base_z, index, leader_index, mav_name, model_name, take_off_height, control_use_true_value, is_leader
         self.single_template_ = '''
-  <!-- The following line causes gzmsg and gzerr messages to be printed to the console
-      (even when Gazebo is started through roslaunch) -->
+  <group ns="%{mav_name}%{index}">    
+    <!--dji sdk 节点-->
+    <node pkg="dji_sdk" type="dji_sdk_node" name="dji_sdk" output="screen">
+      <!-- node parameters -->
+      <param name="serial_name" type="string" value="/dev/ttyUSB0"/>
+      <param name="baud_rate" type="int" value="230400"/>
+      <param name="app_id" type="int" value="1049073" />
+      <param name="app_version" type="int" value="1"/>
+      <param name="align_time" type="bool" value="false"/>
+      <param name="enc_key" type="string" value="a11aebe98da42b84156aa99969c329ccee0b349e4be8995cdd3c3cb1ffef0b8a"/>
+      <param name="use_broadcast" type="bool" value="false"/>
+    </node>
 
-  <group ns="%{mav_name}%{index}">
+    <!--dji adapter 节点-->
+    <node pkg="rotors_utils" type="dji_adapter" name="dji_adapter" output="screen" />
+
+    <!--相机节点, 本来是飞机的一部分来着-->
+    <node pkg="uvc_camera" type="uvc_camera_node" name="camera">
+    </node>
+
     <!--svo 节点-->
     <include file="$(find svo_ros)/launch/test_uav.launch">
-      <arg name="cam_topic" value="camera_nadir/image_raw" />
-    </include>
-    <!--生成飞机模型-->
-    <include file="$(find rotors_gazebo)/launch/spawn_mav.launch">
-      <arg name="mav_name" value="%{mav_name}%{index}" />
-      <arg name="model" value="$(find rotors_description)/urdf/mav_generic_odometry_sensor.gazebo" />
-      <arg name="enable_logging" value="false" />
-      <arg name="enable_ground_truth" value="true" />
-      <arg name="log_file" value="%{mav_name}%{index}"/>
-      <arg name="x" value="%{base_x}"/>
-      <arg name="y" value="%{base_y}"/>
-      <arg name="z" value="%{base_z}"/>
+      <arg name="cam_topic" value="image_raw" />
     </include>
 
     %{relative_templates}
@@ -96,8 +90,7 @@ class Topology(object):
     <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen" >
       <rosparam command="load" file="$(find rotors_utils)/params/lee_controller_%{model_name}.yaml" />
       <rosparam command="load" file="$(find rotors_utils)/params/%{model_name}.yaml" />
-      <remap from="odometry" to="odometry_sensor1/odometry" if="%{control_use_true_value}"/>
-      <remap from="odometry" to="odometry_pub_frame" unless="%{control_use_true_value}"/>
+      <remap from="odometry" to="dji_odometry"/>
       <param name="take_off_height" value="%{take_off_height}-2" />
     </node>
 
@@ -127,6 +120,7 @@ class Topology(object):
     <node name="joy_control" pkg="rotors_gazebo" type="joy_control" output="screen" >
     </node>
 
+    <!--轨迹平滑器-->
     <node name="buffer" pkg="rotors_utils" type="buffer" output="screen">
     </node>
 
@@ -151,6 +145,7 @@ class Topology(object):
       <param name="svo_pub_frame" value="svo/fusion_pose" />
     </node>
 
+    <!--估计飞机的各种参数-->
      <node pkg="pose_estimator" type="pose_estimation" name="position_estimation" output="screen" >
       <rosparam file="$(find pose_estimator)/params/simulation.yaml" />
       <param name="nav_frame" value="/nav" />
@@ -162,8 +157,6 @@ class Topology(object):
       <remap from="magnetic" to="mag" />
     </node>
 
-    <!--<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />-->
-    <!--<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />-->
   </group>
 '''
         # 参数： feature_type, index, other_index, is_leader, mav_name, 

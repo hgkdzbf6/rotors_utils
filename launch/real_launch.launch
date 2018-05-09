@@ -7,45 +7,49 @@
   <!-- The following line causes gzmsg and gzerr messages to be printed to the console
       (even when Gazebo is started through roslaunch) -->
 
-  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models"/>
-  <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
-  <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(find rotors_gazebo)/worlds/$(arg world_name).world" />
-    <arg name="debug" value="false" />
-    <arg name="paused" value="false" />
-    <arg name="gui" value="true" />
-    <arg name="verbose" value="false"/>
-  </include>
-
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rotors_gazebo)/rviz/sim_two_svo.rviz"/>
-  
-  <!-- The following line causes gzmsg and gzerr messages to be printed to the console
+    <!-- The following line causes gzmsg and gzerr messages to be printed to the console
       (even when Gazebo is started through roslaunch) -->
 
   <group ns="hummingbird0">
+    <!--dji sdk 节点-->
+    <node pkg="dji_sdk" type="dji_sdk_node" name="dji_sdk" output="screen">
+      <!-- node parameters -->
+      <param name="serial_name" type="string" value="/dev/ttyUSB0"/>
+      <param name="baud_rate" type="int" value="230400"/>
+      <param name="app_id" type="int" value="1049073" />
+      <param name="app_version" type="int" value="1"/>
+      <param name="align_time" type="bool" value="false"/>
+      <param name="enc_key" type="string" value="a11aebe98da42b84156aa99969c329ccee0b349e4be8995cdd3c3cb1ffef0b8a"/>
+      <param name="use_broadcast" type="bool" value="false"/>
+    </node>
+    <!--dji adapter 节点-->
+    <!--把所需要的数据都暴露出来-->
+    <!--需要输入的数据有:-->
+    <!--camera_nadir/image_raw, 这个用下面的摄像头表示,不需要在这里出现-->
+    <!--air_pressure, 气压计-->
+    <!--odometry_sensor1/odometry, 这个需要用飞控自己提供的传感器拼起来,组成一个里程计-->
+    <!--magnetometer, 磁力计-->
+    <!--imu-->
+    <!--需要输出的数据有:-->
+    <!--motor_speed, 电机转速, 这个最后在lee_position_controller里面, 变成姿态然后输出,因为飞控他本身并不能控制电机转速-->
+    <node pkg="rotors_utils" type="dji_adapter" name="dji_adapter" output="screen" >
+    </node>
+
+    <!--相机节点, 本来是飞机的一部分来着-->
+    <node pkg="uvc_camera" type="uvc_camera_node" name="camera">
+    </node>
+
     <!--svo 节点-->
     <include file="$(find svo_ros)/launch/test_uav.launch">
       <arg name="cam_topic" value="camera_nadir/image_raw" />
     </include>
-
-    <!--生成飞机模型-->
-    <include file="$(find rotors_gazebo)/launch/spawn_mav.launch">
-      <arg name="mav_name" value="hummingbird0" />
-      <arg name="model" value="$(find rotors_description)/urdf/mav_generic_odometry_sensor.gazebo" />
-      <arg name="enable_logging" value="false" />
-      <arg name="enable_ground_truth" value="true" />
-      <arg name="log_file" value="hummingbird0"/>
-      <arg name="x" value="0"/>
-      <arg name="y" value="0"/>
-      <arg name="z" value="0.0"/>
-    </include>
-
+  
     <!--控制器 -->
     <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen" >
       <rosparam command="load" file="$(find rotors_utils)/params/lee_controller_hummingbird.yaml" />
       <rosparam command="load" file="$(find rotors_utils)/params/hummingbird.yaml" />
-      <remap from="odometry" to="odometry_sensor1/odometry" if="false"/>
-      <remap from="odometry" to="odometry_pub_frame" unless="false"/>
+      <remap from="odometry" to="dji_odometry"/>
       <param name="take_off_height" value="3-2" />
     </node>
 
@@ -80,13 +84,31 @@
 
     <!--功能是各种信息数据类型的转化-->
     <node name="transformation" pkg="rotors_utils" type="transformation" output="screen" >
-      <param name="mag_sub_frame" value="magnetometer" />
+      <param name="is_mag_attitude" value="false" />
+
+      <param name="mag_sub_frame" value="magnetometer" />      
+      <param name="attitude_sub_frame" value="attitude_sub_frame" />
       <param name="mag_pub_frame" value="mag" />
-      <param name="image_sub_frame" value="camera_nadir/image_pos_vel" />
+
+      <param name="filtered_imu_sub_frame" value="filtered_imu" />
+      
+      <param name="pressure_sub_frame" value="air_pressure" />
+      <param name="baro_pub_frame" value="altimeter" />
+
+      <param name="odometry_pub_frame" value="odometry_pub_frame" />
+      <param name="odometry_sub_frame" value="odometry_sensor1/odometry" />
+
+      <param name="estimate_pose_frame" value="estimate_pose" />
+      <param name="estimate_velocity" value="estimate_velocity" />
+      <param name="estimate_rate" value="estimate_rate" />
+      
+      <param name="svo_sub_frame" value="svo/pose" />
+      <param name="svo_pub_frame" value="svo/fusion_pose" />
+
     </node>
 
-     <node pkg="pose_estimator" type="pose_estimation" name="pose_estimation" output="screen" >
-      <rosparam file="$(find pose_estimator)/params/simulation.yaml" />
+     <node pkg="rotors_position_estimator" type="pose_estimation" name="position_estimation" output="screen" >
+      <rosparam file="$(find rotors_position_estimator)/params/simulation.yaml" />
       <param name="nav_frame" value="/nav" />
       <param name="publish_world_nav_transform" value="true" />
       <remap from="raw_imu" to="imu" />
@@ -95,9 +117,7 @@
       <remap from="image_pos_vel" to="image_pub_frame" />
       <remap from="magnetic" to="mag" />
     </node>
-
-    <!--<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />-->
-    <!--<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />-->
   </group>
 
 </launch>
+
