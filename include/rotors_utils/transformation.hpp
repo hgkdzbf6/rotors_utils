@@ -70,6 +70,7 @@ private:
   double ref_down_;
 
   bool is_mag_attitude_;
+  bool is_baro_height_;
   
   hector_uav_msgs::Altimeter baro_;
   geometry_msgs::PoseStamped pose_;

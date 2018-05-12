@@ -10,6 +10,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmmx -msse -msse -msse2 -msse3 -mssse3"
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -fsee -fomit-frame-pointer -fno-signed-zeros -fno-math-errno -funroll-loops")
 
+find_package(DJIOSDK REQUIRED)
 find_package(Eigen REQUIRED)
 find_package(Sophus REQUIRED)
 ## Find catkin macros and libraries
@@ -19,7 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation roscpp tf hector_uav_msgs geometry_msgs sensor_msgs rotors_comm nav_msgs)
 
 find_package(catkin REQUIRED COMPONENTS
-  roscpp tf geometry_msgs sensor_msgs hector_uav_msgs nav_msgs mav_msgs rotors_comm
+  roscpp tf geometry_msgs sensor_msgs hector_uav_msgs nav_msgs mav_msgs rotors_comm dji_sdk
 )
 
 add_message_files(FILES
@@ -77,8 +78,8 @@ add_executable(joy_pose
   src/joy_pose.cpp
 )
 add_dependencies(joy_pose  ${catkin_EXPORTED_TARGETS})
-target_link_libraries(joy_pose  ${catkin_LIBRARIES})
-
+target_link_libraries(joy_pose  ${catkin_LIBRARIES} 
+        ${DJIOSDK_LIBRARIES})
 
 install(TARGETS joy_pose
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -121,4 +122,5 @@ add_executable(dji_adapter
 add_dependencies(dji_adapter ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(dji_adapter
   ${catkin_LIBRARIES}
+  ${DJIOSDK_LIBRARIES}
 )

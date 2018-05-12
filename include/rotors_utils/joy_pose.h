@@ -90,6 +90,13 @@ typedef struct ControlMode_{
   ControlState state;
 }ControlMode;
 
+enum UavState{
+  UAV_STATE_ON_GROUND,
+  UAV_STATE_ARMED, 
+  UAV_STATE_TAKING_OFF,
+  UAV_STATE_FLYING,
+};
+
 /**
 * 功能: 产生command_pose
 */
@@ -97,12 +104,14 @@ class JoyPose {
   typedef sensor_msgs::Joy::_buttons_type ButtonType;
 
  private:
+  UavState state_;
   ros::NodeHandle nh_;
   ros::Publisher pose_pub_;
   ros::Subscriber joy_sub_; 
   ros::Subscriber target_pose_sub_;
 
   ros::ServiceClient taking_off_client_;
+  ros::ServiceClient dji_takeff_client_;
   ros::ServiceClient receive_image_client_;
   ros::ServiceClient follower_pose_client_;
   
@@ -119,6 +128,10 @@ class JoyPose {
   bool fly_by_joy_;
   int my_id_;
   int leader_id_;
+  // 是否真是的大疆无人机飞控
+  bool is_real_;
+  // 摇杆姿势计数
+  int joy_action_time_;
 
   // mav_msgs::RollPitchYawrateThrust control_msg_;
   geometry_msgs::PoseStamped pose_;
@@ -145,6 +158,7 @@ class JoyPose {
   // void SetButton(const );
   // void SetAxis();
   bool GetButton(const Button & button);
+  bool JoyAction();
   double GetAxis(const Axis &axis);
  public:
   JoyPose();

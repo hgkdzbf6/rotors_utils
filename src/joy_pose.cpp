@@ -27,7 +27,7 @@ JoyPose::~JoyPose(){
   
 }
 
-JoyPose::JoyPose():fly_by_joy_(true),yaw_(0) {
+JoyPose::JoyPose():state_(UAV_STATE_ON_GROUND),joy_action_time_(0),fly_by_joy_(true),yaw_(0) {
   ros::NodeHandle nh;
   ros::NodeHandle pnh("~");
 
@@ -38,9 +38,11 @@ JoyPose::JoyPose():fly_by_joy_(true),yaw_(0) {
   pose_.pose.orientation.y  = 0;
   pose_.pose.orientation.z = 0;
   pose_.pose.orientation.w = 1;
+  pnh.param<bool >("is_real",is_real_,false);
+
   pnh.param<int >("my_id",my_id_,0);
   pnh.param<int >("leader_id",leader_id_,0);
-  pnh.param<bool >("is_follower",is_follower_,0);
+  pnh.param<bool >("is_follower",is_follower_,false);
   pnh.param<double >("take_off_height", take_off_height_, 2);
 
   pnh.param<int>("x_axis", axes_.x.axis, 5);
@@ -74,6 +76,7 @@ JoyPose::JoyPose():fly_by_joy_(true),yaw_(0) {
   pnh.param<int >("mode", mode_.mode, 0);
   
   taking_off_client_ = nh_.serviceClient<std_srvs::Trigger>("taking_off");
+  dji_takeff_client_ = nh_.serviceClient<std_srvs::Trigger>("dji_takeoff");
   
   pnh.param<std::string>("receive_image", receive_image_str_, "receive_image01");
   receive_image_client_ = nh_.serviceClient<std_srvs::Trigger>(receive_image_str_);
@@ -96,6 +99,19 @@ void JoyPose::TargetPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg){
   target_pose_=*msg;
 }
 
+bool JoyPose::JoyAction(){
+  if ( GetAxis(axes_.x)<-0.5 && GetAxis(axes_.y)>0.5 &&
+     GetAxis(axes_.yaw)<-0.5 && GetAxis(axes_.z)<-0.5){
+       joy_action_time_++;
+  }else{
+    joy_action_time_ = 0;
+  }
+  if (joy_action_time_ > 5){
+    return true;
+  }
+  return false;
+}
+
 void JoyPose::TimerCallback(const ros::TimerEvent& e){
   static bool fly_by_joy_switch=false;
   ros::Time now=ros::Time::now();
@@ -105,8 +121,23 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
   }else{
   }
 
+  // 解锁
+  if (state_ == UAV_STATE_ON_GROUND &&  JoyAction()){
+    std_srvs::Trigger dji_takeoff_srv;
+    state_ = UAV_STATE_ARMED;
+    joy_action_time_=0;
+    if(is_real_){    
+      if(dji_takeff_client_.call(dji_takeoff_srv)){
+        ROS_INFO("dji n3 ready to take off ");
+      }else{
+        ROS_ERROR("Failed to call dji n3 to take off ");
+      }
+    }
+  }
+
   // 起飞
-  if (GetButton(buttons_.takeoff)){
+  if (state_==UAV_STATE_ARMED && (GetButton(buttons_.takeoff) || GetAxis(axes_.z)==1 )){
+       state_=UAV_STATE_TAKING_OFF;
     std_srvs::Trigger srv;
     pose_.pose.position.z= take_off_height_ ;
     if(taking_off_client_.call(srv)){
@@ -121,31 +152,31 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
   // 接收图像
   // 这里数量要对等
   // if(is_follower_){
-    if (GetButton(buttons_.receive_image)){
-      std_srvs::Trigger receive_image_srv;
-      if(receive_image_client_.call(receive_image_srv)){
-        ROS_INFO("receive image message assumed index %d: %s",my_id_,receive_image_srv.response.message.c_str());
-      }else{
-        ROS_ERROR("Failed to call service %d receive_image, %s",my_id_, receive_image_str_.c_str());
-      }
+  if (GetButton(buttons_.receive_image)){
+    std_srvs::Trigger receive_image_srv;
+    if(receive_image_client_.call(receive_image_srv)){
+      ROS_INFO("receive image message assumed index %d: %s",my_id_,receive_image_srv.response.message.c_str());
+    }else{
+      ROS_ERROR("Failed to call service %d receive_image, %s",my_id_, receive_image_str_.c_str());
     }
+  }
   // }
   // 从机飞行套路
   // if(is_follower_){
     // 按下左边的按键
-    if (GetButton(buttons_.go)){
-      ROS_INFO("wtf");
-      mode_.state= CONTROL_SWITCHED;
-      rotors_comm::SuccessiveControl follower_pose_srv;
-      follower_pose_srv.request.pose=pose_;
-      if(follower_pose_client_.call(follower_pose_srv)){
-        ROS_INFO("follower message %d : %s",my_id_,follower_pose_srv.response.message.c_str());
-        if(fly_by_joy_switch)fly_by_joy_=false;
-        fly_by_joy_switch=true;
-      }else{
-        ROS_ERROR("Failed to call service %d go",my_id_);
-      }    
-    }
+  if (GetButton(buttons_.go)){
+    ROS_INFO("wtf");
+    mode_.state= CONTROL_SWITCHED;
+    rotors_comm::SuccessiveControl follower_pose_srv;
+    follower_pose_srv.request.pose=pose_;
+    if(follower_pose_client_.call(follower_pose_srv)){
+      ROS_INFO("follower message %d : %s",my_id_,follower_pose_srv.response.message.c_str());
+      if(fly_by_joy_switch)fly_by_joy_=false;
+      fly_by_joy_switch=true;
+    }else{
+      ROS_ERROR("Failed to call service %d go",my_id_);
+    }    
+  }
   // }
   pose_.header.stamp = now;
   pose_.header.frame_id = world_frame_;

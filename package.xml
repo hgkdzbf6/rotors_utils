@@ -49,6 +49,7 @@
 <build_depend>hector_uav_msgs</build_depend>
 <build_depend>mav_msgs</build_depend>
 <build_depend>rotors_comm</build_depend>
+<build_depend>dji_sdk</build_depend>
 <build_export_depend>roscpp</build_export_depend>
 <build_export_depend>nav_msgs</build_export_depend>
 <build_export_depend>tf</build_export_depend>
@@ -56,7 +57,6 @@
 <build_export_depend>sensor_msgs</build_export_depend>
 <build_export_depend>hector_uav_msgs</build_export_depend>
 <build_export_depend>mav_msgs</build_export_depend>
-<build_export_depend>rotors_comm</build_export_depend>
 <build_export_depend>rotors_comm</build_export_depend>
 <exec_depend>roscpp</exec_depend>
 <exec_depend>nav_msgs</exec_depend>
@@ -66,6 +66,7 @@
 <exec_depend>hector_uav_msgs</exec_depend>
 <exec_depend>mav_msgs</exec_depend>
 <exec_depend>rotors_comm</exec_depend>
+<exec_depend>dji_sdk</exec_depend>
 
 <build_depend>message_generation</build_depend>
 <build_export_depend>message_generation</build_export_depend>

@@ -322,7 +322,7 @@ class Topology(object):
                         # base_y=(i-1)*1.2, 
                         base_y=self.pose[i][1], 
                         is_follower=is_follower, index=index,
-                        leader_index=leader_index, real_joy=False
+                        leader_index=leader_index, real_joy=True
                         ).replace('True','true').replace('False','false')
             self.single_str_ += self.single_strs_[i]
 

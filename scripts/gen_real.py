@@ -54,6 +54,8 @@ class Topology(object):
   <!-- The following line causes gzmsg and gzerr messages to be printed to the console
       (even when Gazebo is started through roslaunch) -->
 
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rotors_utils)/rviz/sim_svo.rviz"/>
+
     %{single_templates}
 </launch>
 '''
@@ -70,7 +72,17 @@ class Topology(object):
       <param name="align_time" type="bool" value="false"/>
       <param name="enc_key" type="string" value="a11aebe98da42b84156aa99969c329ccee0b349e4be8995cdd3c3cb1ffef0b8a"/>
       <param name="use_broadcast" type="bool" value="false"/>
-    </node>
+    </node> 
+    
+    <!--把所需要的数据都暴露出来-->
+    <!--需要输入的数据有:-->
+    <!--camera_nadir/image_raw, 这个用下面的摄像头表示,不需要在这里出现-->
+    <!--air_pressure, 气压计-->
+    <!--odometry_sensor1/odometry, 这个需要用飞控自己提供的传感器拼起来,组成一个里程计-->
+    <!--magnetometer, 磁力计-->
+    <!--imu-->
+    <!--需要输出的数据有:-->
+    <!--motor_speed, 电机转速, 这个最后在lee_position_controller里面, 变成姿态然后输出,因为飞控他本身并不能控制电机转速-->
 
     <!--dji adapter 节点-->
     <node pkg="rotors_utils" type="dji_adapter" name="dji_adapter" output="screen" />
@@ -88,10 +100,10 @@ class Topology(object):
 
     <!--控制器 -->
     <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen" >
-      <rosparam command="load" file="$(find rotors_utils)/params/lee_controller_%{model_name}.yaml" />
-      <rosparam command="load" file="$(find rotors_utils)/params/%{model_name}.yaml" />
-      <remap from="odometry" to="dji_odometry"/>
-      <param name="take_off_height" value="%{take_off_height}-2" />
+      <rosparam command="load" file="$(find rotors_utils)/params/lee_controller_hummingbird.yaml" />
+      <rosparam command="load" file="$(find rotors_utils)/params/hummingbird.yaml" />
+      <remap from="odometry" to="odometry_pub_frame"/>
+      <param name="take_off_height" value="3-2" />
     </node>
 
     <!--和手柄通信的节点-->
@@ -126,23 +138,34 @@ class Topology(object):
 
     <!--功能是各种信息数据类型的转化-->
     <node name="transformation" pkg="rotors_utils" type="transformation" output="screen" >
-      <param name="mag_sub_frame" value="magnetometer" />
+      <param name="is_mag_attitude" value="false" />
+      <!--这里的功能就是把sensor_msgs::MagneticField转化成Vector3-->
+      <param name="mag_sub_frame" value="dji_sdk/attitude" />      
+      <!--这里把四元数转化成欧拉角-->
+      <param name="attitude_sub_frame" value="dji_sdk/attitude" />
       <param name="mag_pub_frame" value="mag" />
 
       <param name="filtered_imu_sub_frame" value="filtered_imu" />
       
+      <!--订阅的气压计,类型为sensor_msgs::FluidPressure-->
       <param name="pressure_sub_frame" value="air_pressure" />
+      <!--发布的气压计,类型为hector_uav_msgs::Altimeter-->
       <param name="baro_pub_frame" value="altimeter" />
 
+      <!--依靠各种传感器数据合成的里程计-->
       <param name="odometry_pub_frame" value="odometry_pub_frame" />
+      <!--真值的里程计,暂时没啥用-->
       <param name="odometry_sub_frame" value="odometry_sensor1/odometry" />
 
+      <!--依靠hector_localization估计出的传感器信息,姿态,速度和角速度-->
       <param name="estimate_pose_frame" value="estimate_pose" />
       <param name="estimate_velocity" value="estimate_velocity" />
       <param name="estimate_rate" value="estimate_rate" />
       
+      <!--svo订阅主题-->
       <param name="svo_sub_frame" value="svo/pose" />
       <param name="svo_pub_frame" value="svo/fusion_pose" />
+
     </node>
 
     <!--估计飞机的各种参数-->
@@ -150,13 +173,11 @@ class Topology(object):
       <rosparam file="$(find pose_estimator)/params/simulation.yaml" />
       <param name="nav_frame" value="/nav" />
       <param name="publish_world_nav_transform" value="true" />
-      <remap from="raw_imu" to="imu" />
+      <remap from="raw_imu" to="dji_sdk/imu" />
       <remap from="svo_image" to="svo/fusion_pose" />
       <param name="tf_prefix" value=""/>
-      <remap from="image_pos_vel" to="image_pub_frame" />
       <remap from="magnetic" to="mag" />
     </node>
-
   </group>
 '''
         # 参数： feature_type, index, other_index, is_leader, mav_name, 

@@ -5,6 +5,7 @@ Transformation::Transformation(){
   ros::NodeHandle pnh("~");
 
   pnh.param<bool>("is_mag_attitude",is_mag_attitude_,true);
+  pnh.param<bool>("is_baro_height",is_baro_height_,true);
   // magnetometer -> vector3  
   pnh.param<std::string>("mag_sub_frame",mag_sub_frame_,"mag_sub_frame");
   pnh.param<std::string>("attitude_sub_frame",attitude_sub_frame_,"attitude_sub_frame");
