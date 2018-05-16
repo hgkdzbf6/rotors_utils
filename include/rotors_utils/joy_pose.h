@@ -26,6 +26,7 @@
 #include <ros/ros.h>
 #include <std_srvs/Trigger.h>
 #include <sensor_msgs/Joy.h>
+#include <std_msgs/UInt8.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include "rotors_comm/SuccessiveControl.h"
 #include "rotors_utils/common.hpp"
@@ -55,7 +56,6 @@ struct Axes {
   Axis x;
   Axis y;
   Axis z;
-  Axis thrust;
   Axis yaw;
 } ;
 
@@ -72,7 +72,6 @@ struct Buttons {
 //   double roll;
 //   double pitch;
 //   double rate_yaw;
-//   double thrust;
 // };
 enum ControlState{
   // 一开始肯定是手柄控制
@@ -109,6 +108,8 @@ class JoyPose {
   ros::Publisher pose_pub_;
   ros::Subscriber joy_sub_; 
   ros::Subscriber target_pose_sub_;
+  ros::Subscriber dji_rc_sub_;
+  ros::Subscriber dji_status_sub_;
 
   ros::ServiceClient taking_off_client_;
   ros::ServiceClient dji_takeff_client_;
@@ -128,6 +129,7 @@ class JoyPose {
   bool fly_by_joy_;
   int my_id_;
   int leader_id_;
+  unsigned char dji_status_;
   // 是否真是的大疆无人机飞控
   bool is_real_;
   // 摇杆姿势计数
@@ -137,6 +139,7 @@ class JoyPose {
   geometry_msgs::PoseStamped pose_;
   geometry_msgs::PoseStamped target_pose_;
   sensor_msgs::Joy current_joy_;
+  sensor_msgs::Joy dji_joy_;
 
   double take_off_height_;
   ros::Timer timer_;
@@ -159,7 +162,9 @@ class JoyPose {
   // void SetAxis();
   bool GetButton(const Button & button);
   bool JoyAction();
+  void DjiStatusCallback(const std_msgs::UInt8ConstPtr& msg);
   double GetAxis(const Axis &axis);
+  void DjiCallback(const sensor_msgs::JoyConstPtr& joy);
  public:
   JoyPose();
   virtual ~JoyPose();

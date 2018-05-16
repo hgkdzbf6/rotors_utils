@@ -12,6 +12,9 @@ DjiAdapter::DjiAdapter():flight_status_(255),display_mode_(255){
 
   odo_pub_=nh_.advertise<nav_msgs::Odometry>("dji_odometry",10);
   // 广播控制信号,roll pitch yaw thrust控制
+
+  // 还要订阅从lee position controller里面出来的roll pitch yaw thrust
+  lee_sub_=nh_.subscribe("cmd_twist",3,&DjiAdapter::TwistCallback,this);
   attitude_pub_control_ = nh_.advertise<sensor_msgs::Joy>("dji_sdk/flight_control_setpoint_rollpitch_yawrate_zposition",10);
   // 其他服务
   control_authority_service_client_ = nh_.serviceClient<dji_sdk::SDKControlAuthority>("dji_sdk/sdk_control_authority");
@@ -24,6 +27,10 @@ DjiAdapter::DjiAdapter():flight_status_(255),display_mode_(255){
   // 获取控制权
   obtain_control_result_ = obtainControl();
 
+  cmd_.axes.push_back(0);
+  cmd_.axes.push_back(0);
+  cmd_.axes.push_back(0);
+  cmd_.axes.push_back(0);
   // cmd_pub_=nh_.advertise<sensor_msgs::Joy>("dji_sdk/flight_control_setpoint_rollpitch_yawrate_zposition",10);
   timer_=nh_.createTimer(ros::Duration(0.01),&DjiAdapter::TimerCallback,this);
 
@@ -36,6 +43,12 @@ DjiAdapter::DjiAdapter():flight_status_(255),display_mode_(255){
 
 DjiAdapter::~DjiAdapter(){
 
+}
+
+void DjiAdapter::TwistCallback(const geometry_msgs::TwistStampedConstPtr& msg){
+  twist_.header.stamp = ros::Time::now();
+  twist_.header.frame_id = "cmd";
+  twist_.twist = msg->twist;
 }
 
 bool DjiAdapter::obtainControl()
@@ -63,15 +76,6 @@ bool DjiAdapter::TakeoffCallback(std_srvs::Trigger::Request &req,
 }
 
 void DjiAdapter::TimerCallback(const ros::TimerEvent & e){
-  if(take_off_received_){
-    if(isM100()){
-      ROS_INFO("M100 taking off!");
-      takeoff_result_ = M100monitoredTakeoff();
-    }else{
-      ROS_INFO("A3/N3 taking off!");
-      takeoff_result_ = monitoredTakeoff();
-    }
-  }
   odometry_.header.stamp=ros::Time::now();
   odometry_.header.frame_id="";
   odometry_.child_frame_id="";
@@ -82,6 +86,16 @@ void DjiAdapter::TimerCallback(const ros::TimerEvent & e){
   odometry_.pose.pose.position.y=pos_.pose.pose.position.y;
   odometry_.pose.pose.position.z=height_;
   odo_pub_.publish(odometry_);
+
+  // roll
+  cmd_.axes[0] = twist_.twist.linear.x;
+  // pitch
+  cmd_.axes[1] = twist_.twist.linear.y;
+  // height/thrust 
+  cmd_.axes[2] = twist_.twist.linear.z;
+  // yawrate
+  cmd_.axes[3] = twist_.twist.angular.z;
+  attitude_pub_control_.publish(cmd_);
 }
 
 void DjiAdapter::PositionCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr & msg){
@@ -139,7 +153,7 @@ bool DjiAdapter::takeoffLand(int task)
 
   if(!droneTaskControl.response.result)
   {
-    ROS_ERROR("takeoff_land fail");
+    ROS_ERROR_STREAM("takeoff_land fail. and error id is "<< droneTaskControl.response.result);
     return false;
   }
 

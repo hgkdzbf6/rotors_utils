@@ -73,10 +73,17 @@
       <param name="follower_pose" value="/hummingbird0/follower_pose00" />
       <param name="target_pose" value="/hummingbird0/target_pose"/>
       <param name="receive_image" value="/hummingbird0/receive_image00"  />
+
+      <param name="is_real" value="true"/>
+      <param name="x_axis" value="1"/>
+      <param name="y_axis" value="2"/>
+      <param name="z_axis" value="4"/>
+      <param name="yaw_axis" value="3"/>
     </node>
     
     <!--手柄的具体动作-->
     <node name="joy_control" pkg="rotors_gazebo" type="joy_control" output="screen" >
+      <param name="is_real" value="true"/>
     </node>
 
     <node name="buffer" pkg="rotors_utils" type="buffer" output="screen">
@@ -114,8 +121,8 @@
 
     </node>
 
-     <node pkg="rotors_position_estimator" type="pose_estimation" name="position_estimation" output="screen" >
-      <rosparam file="$(find rotors_position_estimator)/params/simulation.yaml" />
+     <node pkg="pose_estimator" type="pose_estimation" name="position_estimation" output="screen" >
+      <rosparam file="$(find pose_estimator)/params/simulation.yaml" />
       <param name="nav_frame" value="/nav" />
       <param name="publish_world_nav_transform" value="true" />
       <remap from="raw_imu" to="dji_sdk/imu" />

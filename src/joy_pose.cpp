@@ -48,7 +48,6 @@ JoyPose::JoyPose():state_(UAV_STATE_ON_GROUND),joy_action_time_(0),fly_by_joy_(t
   pnh.param<int>("x_axis", axes_.x.axis, 5);
   pnh.param<int>("y_axis", axes_.y.axis, 4);
   pnh.param<int>("z_axis", axes_.z.axis, 2);
-  pnh.param<int>("thrust_axis", axes_.thrust.axis, -3);
   pnh.param<int>("yaw_axis", axes_.yaw.axis, 1);
 
   pnh.param<double>("yaw_velocity_max", axes_.yaw.factor, 90.0);
@@ -88,6 +87,11 @@ JoyPose::JoyPose():state_(UAV_STATE_ON_GROUND),joy_action_time_(0),fly_by_joy_(t
   target_pose_sub_ = nh_.subscribe(target_pose_str_,10,&JoyPose::TargetPoseCallback,this);
   
   joy_sub_ = nh_.subscribe("joy", 10, &JoyPose::JoyCallback, this);
+
+  if(is_real_){
+    dji_rc_sub_ = nh_.subscribe("dji_sdk/rc",10, &JoyPose::DjiCallback,this);
+    dji_status_sub_ = nh_.subscribe("dji_sdk/flight_status",10,&JoyPose::DjiStatusCallback,this);
+  }
   // 为啥能用这种方法判断呢?
   // 因为根节点的id和leader id才一样
   // 其他的,就算是leader节点,但是都是隶属于他们之上的leader节点的
@@ -100,13 +104,30 @@ void JoyPose::TargetPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg){
 }
 
 bool JoyPose::JoyAction(){
-  if ( GetAxis(axes_.x)<-0.5 && GetAxis(axes_.y)>0.5 &&
-     GetAxis(axes_.yaw)<-0.5 && GetAxis(axes_.z)<-0.5){
-       joy_action_time_++;
-  }else{
-    joy_action_time_ = 0;
+  double x,y,z,yaw;
+  x = GetAxis(axes_.x);
+  y = GetAxis(axes_.y);
+  z = GetAxis(axes_.z);
+  yaw = GetAxis(axes_.yaw);
+
+  if(!is_real_){
+    if ( x<-0.5 && y>0.5 &&
+      yaw<-0.5 && z<=0.5){
+        joy_action_time_++;
+    }else{
+      joy_action_time_ = 0;
+    }
+  }else{    
+    if ( x==-1 && y==-1 &&
+      yaw==90 && z==-1){
+        joy_action_time_++;
+    }else{
+      // ROS_INFO_STREAM(x<<" "<<y<<" "<<z<<" "<<yaw<<" ");
+      joy_action_time_ = 0;
+    }
   }
   if (joy_action_time_ > 5){
+    ROS_INFO("Joy action!");
     return true;
   }
   return false;
@@ -122,7 +143,7 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
   }
 
   // 解锁
-  if (state_ == UAV_STATE_ON_GROUND &&  JoyAction()){
+  if (state_ == UAV_STATE_ON_GROUND && dji_status_ == 1){
     std_srvs::Trigger dji_takeoff_srv;
     state_ = UAV_STATE_ARMED;
     joy_action_time_=0;
@@ -137,7 +158,7 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
 
   // 起飞
   if (state_==UAV_STATE_ARMED && (GetButton(buttons_.takeoff) || GetAxis(axes_.z)==1 )){
-       state_=UAV_STATE_TAKING_OFF;
+    state_=UAV_STATE_TAKING_OFF;
     std_srvs::Trigger srv;
     pose_.pose.position.z= take_off_height_ ;
     if(taking_off_client_.call(srv)){
@@ -210,13 +231,26 @@ void JoyPose::JoyCallback(const sensor_msgs::JoyConstPtr& joy) {
   current_joy_ = *joy;
 }
 
+void JoyPose::DjiCallback(const sensor_msgs::JoyConstPtr& joy) {
+  dji_joy_ = *joy;
+}
+void JoyPose::DjiStatusCallback(const std_msgs::UInt8ConstPtr& msg) {
+  dji_status_ = msg->data;
+}
+
 double JoyPose::GetAxis(const Axis &axis){
-  if (axis.axis == 0 || ( static_cast<uint>(std::abs(axis.axis)) > current_joy_.axes.size()) )
+  sensor_msgs::Joy joy;
+  if(!is_real_){
+    joy = current_joy_;
+  } else{
+    joy = dji_joy_;
+  }
+  if (axis.axis == 0 || ( static_cast<uint>(std::abs(axis.axis)) > joy.axes.size()) )
   {
 //    ROS_ERROR_STREAM("Axis " << axis.axis << " out of range, joy has " << current_joy_.axes.size() << " axes");
     return 0;
   }
-  double output = std::abs(axis.axis) / axis.axis * current_joy_.axes[std::abs(axis.axis) - 1] * axis.factor + axis.offset;
+  double output = std::abs(axis.axis) / axis.axis * joy.axes[std::abs(axis.axis) - 1] * axis.factor + axis.offset;
 // TODO keep or remove deadzone? may not be needed
 // if (std::abs(output) < axis.max_ * 0.2)
 // {

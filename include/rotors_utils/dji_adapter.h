@@ -37,6 +37,7 @@ private:
   ros::Subscriber rate_sub_;
   ros::Subscriber vel_sub_;
   ros::Subscriber height_sub_;
+  ros::Subscriber lee_sub_;
 
   ros::Publisher odo_pub_;
   ros::Publisher attitude_pub_control_;
@@ -51,6 +52,9 @@ private:
   sensor_msgs::NavSatFix current_gps_;
   geometry_msgs::Quaternion current_atti_;
   geometry_msgs::Point current_local_pos_;
+  geometry_msgs::TwistStamped twist_;
+
+  sensor_msgs::Joy cmd_;
 
   bool obtain_control_result_;
   // 起飞的结果
@@ -77,7 +81,7 @@ private:
   void VelocityCallback(const geometry_msgs::Vector3StampedConstPtr & msg);
   void HeightCallback(const std_msgs::Float32ConstPtr & msg);
   void TimerCallback(const ros::TimerEvent & e);
-  
+  void TwistCallback(const geometry_msgs::TwistStampedConstPtr& msg);
   bool TakeoffCallback(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);
   bool setLocalPosition();
   bool isM100();
