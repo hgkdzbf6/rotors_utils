@@ -9,6 +9,7 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/QuaternionStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/PointStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Joy.h>
@@ -40,6 +41,7 @@ private:
   ros::Subscriber lee_sub_;
 
   ros::Publisher odo_pub_;
+  ros::Publisher height_pub_;
   ros::Publisher attitude_pub_control_;
 
   ros::ServiceClient control_authority_service_client_;
@@ -67,14 +69,15 @@ private:
   geometry_msgs::QuaternionStamped atti_;
   geometry_msgs::Vector3Stamped rate_;
   geometry_msgs::Vector3Stamped vel_;
-  geometry_msgs::PoseWithCovarianceStamped pos_;
+  geometry_msgs::PointStamped pos_;
+  geometry_msgs::PointStamped height_point_;
   sensor_msgs::Imu imu_;
 
   nav_msgs::Odometry odometry_;
   ros::Timer timer_;
 
   // svo 
-  void PositionCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr & msg);
+  void PositionCallback(const geometry_msgs::PointStampedConstPtr & msg);
   void AttitudeCallback(const geometry_msgs::QuaternionStampedConstPtr & msg);
   void ImuCallback(const sensor_msgs::ImuConstPtr & msg);
   void RateCallback(const geometry_msgs::Vector3StampedConstPtr & msg);

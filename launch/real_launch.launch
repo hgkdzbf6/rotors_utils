@@ -13,16 +13,17 @@
 
   <group ns="hummingbird0">
     <!--dji sdk 节点-->
-    <node pkg="dji_sdk" type="dji_sdk_node" name="dji_sdk" output="screen">
+    <!--<node pkg="dji_sdk" type="dji_sdk_node" name="dji_sdk" output="screen">-->
       <!-- node parameters -->
-      <param name="serial_name" type="string" value="/dev/ttyUSB0"/>
+      <!--<param name="serial_name" type="string" value="/dev/ttyUSB0"/>
       <param name="baud_rate" type="int" value="230400"/>
       <param name="app_id" type="int" value="1049073" />
       <param name="app_version" type="int" value="1"/>
       <param name="align_time" type="bool" value="false"/>
       <param name="enc_key" type="string" value="a11aebe98da42b84156aa99969c329ccee0b349e4be8995cdd3c3cb1ffef0b8a"/>
-      <param name="use_broadcast" type="bool" value="false"/>
-    </node>
+      <param name="use_broadcast" type="bool" value="false"/>-->
+    <!--</node>-->
+
     <!--dji adapter 节点-->
     <!--把所需要的数据都暴露出来-->
     <!--需要输入的数据有:-->
@@ -38,11 +39,15 @@
 
     <!--相机节点, 本来是飞机的一部分来着-->
     <node pkg="uvc_camera" type="uvc_camera_node" name="camera">
+      <param name="fps" value="30"/>
+      <param name="width" value="640"/>
+      <param name="height" value="480"/>
+
     </node>
 
     <!--svo 节点-->
     <include file="$(find svo_ros)/launch/test_uav.launch">
-      <arg name="cam_topic" value="camera_nadir/image_raw" />
+      <arg name="cam_topic" value="image_raw" />
     </include>
   
     <!--控制器 -->
@@ -59,8 +64,8 @@
     </node>    
     
     <!--用键盘模拟出的手柄节点-->
-    <node name="joy_sim" pkg="rotors_utils" type="joy_sim" output="screen" unless="false"> 
-    </node>
+    <!--<node name="joy_sim" pkg="rotors_utils" type="joy_sim" output="screen" unless="false"> 
+    </node>-->
 
     <!--从hover_control修改过来,变得能够使用手柄控制-->
     <!--或许这边应该换个控制器?-->

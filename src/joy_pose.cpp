@@ -27,7 +27,7 @@ JoyPose::~JoyPose(){
   
 }
 
-JoyPose::JoyPose():state_(UAV_STATE_ON_GROUND),joy_action_time_(0),fly_by_joy_(true),yaw_(0) {
+JoyPose::JoyPose():state_(UAV_STATE_ON_GROUND),joy_action_time_(0),fly_by_joy_(true),yaw_(0){
   ros::NodeHandle nh;
   ros::NodeHandle pnh("~");
 
@@ -91,6 +91,8 @@ JoyPose::JoyPose():state_(UAV_STATE_ON_GROUND),joy_action_time_(0),fly_by_joy_(t
   if(is_real_){
     dji_rc_sub_ = nh_.subscribe("dji_sdk/rc",10, &JoyPose::DjiCallback,this);
     dji_status_sub_ = nh_.subscribe("dji_sdk/flight_status",10,&JoyPose::DjiStatusCallback,this);
+  }else{
+    dji_status_ =1;
   }
   // 为啥能用这种方法判断呢?
   // 因为根节点的id和leader id才一样

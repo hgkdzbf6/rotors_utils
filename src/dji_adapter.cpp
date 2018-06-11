@@ -9,7 +9,9 @@ DjiAdapter::DjiAdapter():flight_status_(255),display_mode_(255){
   atti_sub_=nh_.subscribe("dji_sdk/attitude",10,&DjiAdapter::AttitudeCallback,this);
   rate_sub_=nh_.subscribe("dji_sdk/angular_velocity_fused",10,&DjiAdapter::RateCallback,this);
   height_sub_=nh_.subscribe("dji_sdk/height_above_takeoff",10,&DjiAdapter::HeightCallback,this);
-
+  // 广播高度,给状态估计器用.
+  height_pub_ = nh_.advertise<geometry_msgs::PointStamped>("pressure_height",10);
+  // 真实的里程计,这个虽然不用做控制,但是作为参考看看也是可以的
   odo_pub_=nh_.advertise<nav_msgs::Odometry>("dji_odometry",10);
   // 广播控制信号,roll pitch yaw thrust控制
 
@@ -24,16 +26,17 @@ DjiAdapter::DjiAdapter():flight_status_(255),display_mode_(255){
   
   // 起飞服务,接受到这个服务之后才起飞
   take_off_service_server_ = nh_.advertiseService("dji_takeoff",&DjiAdapter::TakeoffCallback,this);
-  // 获取控制权
-  obtain_control_result_ = obtainControl();
 
   cmd_.axes.push_back(0);
   cmd_.axes.push_back(0);
   cmd_.axes.push_back(0);
   cmd_.axes.push_back(0);
   // cmd_pub_=nh_.advertise<sensor_msgs::Joy>("dji_sdk/flight_control_setpoint_rollpitch_yawrate_zposition",10);
-  timer_=nh_.createTimer(ros::Duration(0.01),&DjiAdapter::TimerCallback,this);
-
+  timer_=nh_.createTimer(ros::Duration(0.1),&DjiAdapter::TimerCallback,this);
+  // 获取控制权
+  // 失败的原因是,dji_sdk还没有初始化完成.等5秒把.
+  ros::Duration(15).sleep(); 
+  obtain_control_result_ = obtainControl();
   if (!setLocalPosition()) // We need this for height
   {
     ROS_ERROR("GPS health insufficient - No local frame reference for height. Exiting.");
@@ -62,7 +65,7 @@ bool DjiAdapter::obtainControl()
     ROS_ERROR("obtain control failed!");
     return false;
   }
-
+  ROS_INFO("obtain control succeed.");
   return true;
 }
 
@@ -82,8 +85,8 @@ void DjiAdapter::TimerCallback(const ros::TimerEvent & e){
   odometry_.pose.pose.orientation=atti_.quaternion;
   odometry_.twist.twist.linear=vel_.vector;
   odometry_.twist.twist.angular=imu_.angular_velocity;
-  odometry_.pose.pose.position.x=pos_.pose.pose.position.x;
-  odometry_.pose.pose.position.y=pos_.pose.pose.position.y;
+  odometry_.pose.pose.position.x=pos_.point.x;
+  odometry_.pose.pose.position.y=pos_.point.y;
   odometry_.pose.pose.position.z=height_;
   odo_pub_.publish(odometry_);
 
@@ -96,9 +99,14 @@ void DjiAdapter::TimerCallback(const ros::TimerEvent & e){
   // yawrate
   cmd_.axes[3] = twist_.twist.angular.z;
   attitude_pub_control_.publish(cmd_);
+  height_point_.point.x = 0;
+  height_point_.point.y = 0;
+  height_point_.point.z = height_;
+  height_pub_.publish(height_point_);
+
 }
 
-void DjiAdapter::PositionCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr & msg){
+void DjiAdapter::PositionCallback(const geometry_msgs::PointStampedConstPtr & msg){
   pos_=*msg;
 }
 
