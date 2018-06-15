@@ -62,6 +62,7 @@ void Buffer::TimerCallback(const ros::TimerEvent & e){
       output_.pose.position.z = pre_pose_.pose.position.z + dz / scale; 
     }
   }
+  output_.pose.orientation = pose_.pose.orientation;
   filtered_pub_.publish(output_);
   pre_pose_= output_;
 }
@@ -73,7 +74,7 @@ void Buffer::CommandCallback(const geometry_msgs::PoseStampedConstPtr & msg){
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "buffer");
-  Buffer buffer(0.5,0.1,0);
+  Buffer buffer(1.5,0.01,0);
   ros::spin();
   return 0;
 }

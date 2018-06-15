@@ -212,10 +212,11 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
     pose_.pose.position.x = target_pose_.pose.position.x;
     pose_.pose.position.y = target_pose_.pose.position.y;
     pose_.pose.position.z = take_off_height_; 
+    ROS_INFO_STREAM("**************************************************************");
   } else if(fly_by_joy_) {
     pose_.pose.position.x += (cos(yaw_) * GetAxis(axes_.x) - sin(yaw_) * GetAxis(axes_.y)) * dt *3;
     pose_.pose.position.y += (cos(yaw_) * GetAxis(axes_.y) + sin(yaw_) * GetAxis(axes_.x)) * dt *3;
-    yaw_ += GetAxis(axes_.yaw) * M_PI/180.0 * dt;
+    yaw_ += GetAxis(axes_.yaw) * M_PI/180.0 * dt / 15;
   } else if(is_follower_) {
     // 这边注释掉，follower就停掉了。
     pose_.pose.position.x = target_pose_.pose.position.x;
