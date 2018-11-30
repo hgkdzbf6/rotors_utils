@@ -61,10 +61,10 @@ struct Axes {
 
 struct Buttons {
   Button slow;
-  Button go;
-  Button receive_image;
-  Button interrupt;
-  Button takeoff;
+  Button go;              //b[2]
+  Button receive_image;  //b[1]
+  Button interrupt;  //b[3]
+  Button takeoff;  //b[0]
 } ;
 
 // struct Max {

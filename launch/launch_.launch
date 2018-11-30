@@ -47,9 +47,11 @@
       <rosparam command="load" file="$(find rotors_utils)/params/hummingbird.yaml" />
       <remap from="odometry" to="odometry_sensor1/odometry" if="false"/>
       <remap from="odometry" to="odometry_pub_frame" unless="false"/>
+      <remap from="leader_desired_pose" to="leader_desired_pose00" />
       <param name="take_off_height" value="3-2" />
     </node>    
     
+
     <!--控制器 -->
     <!--<node name="roll_pitch_yawrate_thrust_controller_node" pkg="rotors_control" type="roll_pitch_yawrate_thrust_controller_node" output="screen" >
       <rosparam command="load" file="$(find rotors_utils)/params/lee_controller_hummingbird.yaml" />
@@ -128,6 +130,32 @@
       <remap from="image_pos_vel" to="image_pub_frame" />
       <remap from="magnetic" to="mag" />
     </node>
+
+    <!--产生在L2中看F2的目标轨迹, 但是这个是F2产生的，问问老板改不改吧-->
+    <node name="follower_pose00" pkg="rotors_utils" 
+      type="follower_pose" output="screen" >
+      <param name="my_id" value="0"/>
+      <param name="other_id" value="0"/>
+      <!--<param name="relative_pose" value="relative_pose00" />
+      <param name="follower_pose" value="follower_pose00" />-->
+      <param name="relative_pose" value="relative_pose00" />
+      <param name="follower_pose" value="follower_pose" />
+      <param name="leader_desired_pose" value="target_pose" />
+      <!--<param name="trajectory_base" value="target_pose" />-->
+    </node>
+
+    <!--follower节点的期望值计算节点-->
+    <!--<node name="trajectory_generation00" 
+      pkg="rotors_utils" type="trajectory_generation" output="screen" >
+      <param name="my_id" value="0"/>
+      <param name="follower_id" value="0"/>
+      <param name="is_self_control" value="false"/>
+      <param name="T_L2_F2" value="/hummingbird0/relative_pose00"/>
+      <param name="T_LS_L2" value="/hummingbird0/svo/fusion_pose"/>
+      <param name="T_FS_F2" value="/hummingbird0/svo/fusion_pose"/>
+      <param name="T_L2_dF2" value="/hummingbird0/leader_desired_pose00"/>
+      <param name="T_FW_dF2" value="/hummingbird0/target_pose"/>
+    </node>-->
 
     <!--<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />-->
     <!--<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />-->

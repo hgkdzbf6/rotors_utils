@@ -93,6 +93,7 @@ void TrajectoryGeneration::TimerCallback(const ros::TimerEvent & e){
   // S_FW_dF2_ = S_LW_FW_.inverse() * S_LS_LW_.inverse() * S_LS_L2_ * S_L2_dF2_;
   if(is_self_control_){
     S_FW_dF2_ =                                            S_L2_dF2_.inverse();
+    // S_FW_dF2_ =                                               
   }else{
     // S_FW_dF2_ = S_LW_FW_ *                                 S_L2_dF2_.inverse();
     // S_FW_dF2_ = S_LW_FW_ * S_LS_LW_.inverse() * S_LS_L2_ * S_L2_dF2_.inverse();

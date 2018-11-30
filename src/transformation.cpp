@@ -72,25 +72,39 @@ void Transformation::SvoCallback(const geometry_msgs::PoseWithCovarianceStampedC
   geometry_msgs::PoseWithCovarianceStamped pose;
   pose.header=msg->header;
   pose.pose.pose=msg->pose.pose;
-  tf::Quaternion quat;
-  tf::quaternionMsgToTF(pose.pose.pose.orientation, quat);
-  double yaw,pitch,roll;
-  tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
-  double x,y;
+  Eigen::Quaterniond quat(
+    pose.pose.pose.orientation.w,
+    pose.pose.pose.orientation.x,
+    pose.pose.pose.orientation.y,
+    pose.pose.pose.orientation.z
+  );
+  double scale = fabs(7.5/(odometry_.pose.pose.position.z));
+  Eigen::Vector3d position1;
+  Eigen::Vector3d position2;
+  Eigen::Vector3d t = Eigen::Vector3d::Zero();
+  // t(2) = 2.2;
+  Eigen::Matrix3d R;
+  R = Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitZ()) ;
+  position1 << pose.pose.pose.position.x, 
+               pose.pose.pose.position.y, 
+               pose.pose.pose.position.z;
+  position2 = scale * R * quat.toRotationMatrix().inverse() * position1 + t;
+  // double x,y;
   // double cosYaw=cos(yaw),sinYaw=sin(yaw);
-  double cosYaw=cos(yaw),sinYaw=sin(yaw);
+  // double cosYaw=cos(yaw),sinYaw=sin(yaw);
   // x=pose.pose.pose.position.y;
   // y=pose.pose.pose.position.x;
-  y =   pose.pose.pose.position.x * cosYaw + pose.pose.pose.position.y * sinYaw;
-  x = - pose.pose.pose.position.x * sinYaw + pose.pose.pose.position.y * cosYaw;
-  x = x * 3 / odometry_.pose.pose.position.z * 2.5;
-  y = y * 3 / odometry_.pose.pose.position.z * 2.5;
-  pose.pose.pose.position.x=x;
-  pose.pose.pose.position.y=y;
-  pose.pose.covariance[0]=msg->pose.covariance[0];
-  pose.pose.covariance[1]=msg->pose.covariance[1];
-  pose.pose.covariance[2]=msg->pose.covariance[2];
-  pose.pose.covariance[3]=msg->pose.covariance[3];
+  // y =   pose.pose.pose.position.x * cosYaw + pose.pose.pose.position.y * sinYaw;
+  // x = - pose.pose.pose.position.x * sinYaw + pose.pose.pose.position.y * cosYaw;
+  // x = x * 3 / odometry_.pose.pose.position.z * 2.5;
+  // y = y * 3 / odometry_.pose.pose.position.z * 2.5;
+  pose.pose.pose.position.x=position2(0);
+  pose.pose.pose.position.y=position2(1);
+  pose.pose.pose.position.z=position2(2);
+  pose.pose.covariance=msg->pose.covariance ;//* scale * scale;
+  // pose.pose.covariance[1]=msg->pose.covariance[1];
+  // pose.pose.covariance[2]=msg->pose.covariance[2];
+  // pose.pose.covariance[3]=msg->pose.covariance[3];
   // pose.pose.pose.position.z+=odometry_.pose.pose.position.z;
   // ROS_INFO("I plus %lf",odometry_.pose.pose.position.z);
   svo_pub_.publish(pose);

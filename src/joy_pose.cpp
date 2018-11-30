@@ -200,6 +200,10 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
       ROS_ERROR("Failed to call service %d go",my_id_);
     }    
   }
+
+  if (GetButton(buttons_.interrupt)){
+
+  }
   // }
   pose_.header.stamp = now;
   pose_.header.frame_id = world_frame_;
@@ -207,12 +211,14 @@ void JoyPose::TimerCallback(const ros::TimerEvent& e){
   tf2::Quaternion q;
   q.setRPY(0.0, 0.0, yaw_);
   pose_.pose.orientation = tf2::toMsg(q);
+  static double t = 0;
+  t = t+dt;
   // 首先都被手柄控制
   if(mode_.state == CONTROL_SWITCHED){
-    pose_.pose.position.x = target_pose_.pose.position.x;
-    pose_.pose.position.y = target_pose_.pose.position.y;
-    pose_.pose.position.z = take_off_height_; 
-    ROS_INFO_STREAM("**************************************************************");
+    pose_.pose.position.x = sin(now.toSec() / 10.0)*2.6;
+    pose_.pose.position.y = cos(now.toSec() / 10.0)*2.6;
+    pose_.pose.position.z = take_off_height_ + t * 0.0001; 
+    // ROS_INFO_STREAM("**************************************************************");
   } else if(fly_by_joy_) {
     pose_.pose.position.x += (cos(yaw_) * GetAxis(axes_.x) - sin(yaw_) * GetAxis(axes_.y)) * dt *3;
     pose_.pose.position.y += (cos(yaw_) * GetAxis(axes_.y) + sin(yaw_) * GetAxis(axes_.x)) * dt *3;

@@ -12,14 +12,18 @@ FollowerPose::FollowerPose():receive_first_msg_(false),follower_pose_start_(fals
   }
   pnh.param<std::string>("follower_pose", follower_pose_str_, "follower_pose");
   pnh.param<std::string>("relative_pose",relative_str_,"relative_pose01");
+  pnh.param<std::string>("leader_desired_pose",leader_desired_pose_str_, "leader_desired_pose");
+  pnh.param<std::string>("trajectory_base",trajectory_base_str_,"trajectory_base");
   server_= nh_.advertiseService(follower_pose_str_, &FollowerPose::callback,this);  
   relative_sub_=nh_.subscribe(relative_str_,5,&FollowerPose::relativeCallback,this);
   
   timer_=nh_.createTimer(ros::Duration(0.1),&FollowerPose::TimerCallback,this);
   command_pub_=nh_.advertise<geometry_msgs::PoseStamped>(
-    "leader_desired_pose"+std::to_string(my_id_)+std::to_string(other_id_), 10);
+    // "leader_desired_pose"+std::to_string(my_id_)+std::to_string(other_id_), 10);
+    leader_desired_pose_str_, 10);
   trajectory_base_pub_=nh_.advertise<geometry_msgs::PoseStamped>(
-    "trajectory_base"+std::to_string(my_id_)+std::to_string(other_id_), 10);
+    // "trajectory_base"+std::to_string(my_id_)+std::to_string(other_id_), 10);
+    trajectory_base_str_, 10);
 }
 
 FollowerPose::~FollowerPose()
@@ -37,9 +41,6 @@ void FollowerPose::TimerCallback(const ros::TimerEvent& e){
         if(new_data_approach_){
           // 这里产生x^L2_d,F
           circle_.update(dt);
-          // ROS_INFO_STREAM(std::endl<<"circle x:"<<circle_.pose_.pose.position.x
-          // <<"  circle y:"<< circle_.pose_.pose.position.y<<
-          // "  circle radius:"<< circle_.radius_<<std::endl);
           // new_data_approach_=false;
         }
         // 在需要发布的时候更新时间
@@ -67,9 +68,9 @@ void FollowerPose::relativeCallback(const geometry_msgs::PoseStampedConstPtr& ms
       receive_first_msg_=true;
       if(!is_leader_){
         // circle_ = Circle(pose_);
-        circle_ = Circle(0);
+        circle_ = Circle(0.6);
       }else{
-        circle_ = Circle(1.6);
+        circle_ = Circle(0.6);
       }
       ROS_INFO_STREAM(std::endl<<"circle x:"<<circle_.pose_.pose.position.x
           <<"  circle y:"<< circle_.pose_.pose.position.y<<

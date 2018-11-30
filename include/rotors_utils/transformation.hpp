@@ -18,7 +18,8 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <std_srvs/Trigger.h>
-
+#include <Eigen/Core>
+#include <Eigen/Dense>
 #ifdef USE_SVO
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #endif
